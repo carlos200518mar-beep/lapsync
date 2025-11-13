@@ -8,7 +8,6 @@ import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.web.RedirectStrategy;
 import org.springframework.security.web.DefaultRedirectStrategy;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
-import org.springframework.security.web.savedrequest.SavedRequest;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.RequestCache;
 import org.springframework.stereotype.Component;
@@ -29,32 +28,27 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
             throws IOException, ServletException {
 
         Set<String> roles = AuthorityUtils.authorityListToSet(authentication.getAuthorities());
+        
+        System.out.println("🟣 CustomAuthenticationSuccessHandler - Roles detectados: " + roles);
 
-        // 1) Si hay una SavedRequest (el user intentó entrar a una URL protegida), respétala
-        SavedRequest saved = requestCache.getRequest(request, response);
-        if (saved != null) {
-            String redirectUrl = saved.getRedirectUrl();
-
-            // Evitar mandar a un estudiante a /administrador/**
-            boolean isAdminArea = redirectUrl.contains("/administrador/");
-            boolean isAdmin = roles.contains("ROLE_ADMIN") || roles.contains("ROLE_SUPERADMIN");
-
-            if (isAdminArea && !isAdmin) {
-                redirect.sendRedirect(request, response, "/estudiante/inicio");
-                return;
-            }
-            redirect.sendRedirect(request, response, redirectUrl);
-            return;
-        }
-
-        // 2) Redirección por rol (cuando no hay SavedRequest)
+        // Determinar URL de redirección según el rol
+        String targetUrl;
+        
         if (roles.contains("ROLE_SUPERADMIN") || roles.contains("ROLE_ADMIN")) {
-            redirect.sendRedirect(request, response, "/administrador/dashboard");
+            targetUrl = "/administrador/dashboard";
+            System.out.println("🟣 Redirigiendo a: " + targetUrl + " (ADMIN/SUPERADMIN)");
         } else if (roles.contains("ROLE_STUDENT")) {
-            redirect.sendRedirect(request, response, "/estudiante/inicio");
+            targetUrl = "/estudiante/inicio";
+            System.out.println("🟣 Redirigiendo a: " + targetUrl + " (STUDENT)");
         } else {
-            // fallback
-            redirect.sendRedirect(request, response, "/");
+            targetUrl = "/";
+            System.out.println("🟣 Redirigiendo a: " + targetUrl + " (FALLBACK - Sin rol reconocido)");
         }
+
+        // Limpiar la caché de requests guardados
+        requestCache.removeRequest(request, response);
+        
+        // Realizar la redirección
+        redirect.sendRedirect(request, response, targetUrl);
     }
 }
