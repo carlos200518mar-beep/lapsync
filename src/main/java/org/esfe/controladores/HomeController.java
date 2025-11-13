@@ -11,7 +11,17 @@ public class HomeController {
 
     @GetMapping("/")
     public String home() {
-        return "home/index"; // Esto buscará templates/home/index.html
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        
+        // Si el usuario está autenticado y no es anónimo, redirigir al dashboard
+        if (auth != null && auth.isAuthenticated() && 
+            !auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ANONYMOUS"))) {
+            return "redirect:/dashboard";
+        }
+        
+        // Si no está autenticado, redirigir al login
+        return "redirect:/login";
     }
 
     @GetMapping("/dashboard")
