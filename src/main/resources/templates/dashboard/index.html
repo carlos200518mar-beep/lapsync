@@ -20,8 +20,7 @@
     <script>
         !function(){
           try{
-            const role = 'admin'; // dashboard es para admin/superadmin
-            const key = 'theme_' + role;
+            const key = 'theme';
             const t = localStorage.getItem(key)
               || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
             document.documentElement.setAttribute('data-theme', t);

@@ -14,7 +14,7 @@
     <script>
         !function(){
           try{
-            const key = 'theme_admin';
+            const key = 'theme';
             const t = localStorage.getItem(key)
               || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light');
             document.documentElement.setAttribute('data-theme', t);
