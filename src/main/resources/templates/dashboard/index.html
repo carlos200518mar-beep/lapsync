@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Panel de Administración - LapSync</title>
+
+    <!-- Fuentes + Iconos -->
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css"/>
+
+    <!-- CSS global -->
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css"/>
+
+    <!-- Anti-FOUC -->
+    <script>
+        !function(){
+          try{
+            const role = 'admin'; // dashboard es para admin/superadmin
+            const key = 'theme_' + role;
+            const t = localStorage.getItem(key)
+              || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', t);
+            document.documentElement.style.colorScheme = t;
+          }catch(e){}
+        }();
+    </script>
+</head>
+
+<body>
+<header class="app-header">
+    <div class="brand">
+        <i class="bi bi-laptop"></i>
+        <div class="brand-text">
+            <span class="title">LapSync</span>
+            <span class="subtitle">Sistema de Préstamos</span>
+        </div>
+    </div>
+
+    <div class="header-actions">
+        <button id="themeToggle" class="btn btn-ghost theme-toggle" aria-label="Cambiar tema" title="Cambiar tema" aria-pressed="false">
+            <i class="bi bi-sun-fill theme-icon sun"></i>
+            <i class="bi bi-moon-stars-fill theme-icon moon"></i>
+        </button>
+
+        <div class="user-chip">
+            <i class="bi bi-person-circle"></i>
+            <span class="user-name" th:text="${userName} ?: ${#authentication?.name}">Usuario</span>
+            <span class="role-badge"
+                  th:text="${userRole} ?: ${#authentication?.authorities[0]?.authority?.replace('ROLE_','')}">ADMIN</span>
+        </div>
+
+        <form th:action="@{/logout}" method="post">
+            <button class="btn btn-ghost">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Salir</span>
+            </button>
+        </form>
+    </div>
+</header>
+
+<!-- NAV (debajo del header) -->
+<nav class="quick-tabs container" aria-label="Secciones">
+    <a class="tab-link active" th:href="@{/administrador/dashboard}" aria-current="page">
+        <i class="bi bi-grid-1x2"></i><span>Panel General</span>
+    </a>
+    <a class="tab-link" th:href="@{/solicitudes}">
+        <i class="bi bi-card-checklist"></i><span>Gestión de Solicitudes</span>
+    </a>
+    <a class="tab-link" th:href="@{/laptops}">
+        <i class="bi bi-hdd-network"></i><span>Gestión de Inventario</span>
+    </a>
+    <a class="tab-link" th:href="@{/sanciones/admin/listar}">
+        <i class="bi bi-shield-exclamation"></i><span>Gestión de Sanciones</span>
+    </a>
+</nav>
+
+<main class="container app-main">
+    <!-- KPIs -->
+    <section class="stats-grid" aria-label="Indicadores">
+        <article class="kpi-card animate-in">
+            <div class="kpi-head">
+                <div class="kpi-icon soft-violet"><i class="bi bi-laptop"></i></div>
+                <div class="kpi-titles">
+                    <h4 class="kpi-title">Laptops disponibles</h4>
+                    <p class="kpi-sub" th:text="${laptopsTotales} != null ? 'Total de laptops: ' + laptopsTotales : 'Total de laptops: 0'">Total de laptops: 0</p>
+                </div>
+            </div>
+            <div class="kpi-value" th:attr="data-target=${laptopsDisponibles}" th:text="${laptopsDisponibles}">0</div>
+        </article>
+
+        <article class="kpi-card animate-in" style="--d:.05s">
+            <div class="kpi-head">
+                <div class="kpi-icon soft-blue"><i class="bi bi-person-workspace"></i></div>
+                <div class="kpi-titles">
+                    <h4 class="kpi-title">Préstamos activos</h4>
+                    <p class="kpi-sub">En curso</p>
+                </div>
+            </div>
+            <div class="kpi-value" th:attr="data-target=${prestamosActivos}" th:text="${prestamosActivos}">0</div>
+        </article>
+
+        <article class="kpi-card animate-in" style="--d:.1s">
+            <div class="kpi-head">
+                <div class="kpi-icon soft-amber"><i class="bi bi-alarm"></i></div>
+                <div class="kpi-titles">
+                    <h4 class="kpi-title">Por vencer</h4>
+                    <p class="kpi-sub">Próximos 25 min</p> <!-- actualizado -->
+                </div>
+            </div>
+            <div class="kpi-value" th:attr="data-target=${porVencer}" th:text="${porVencer}">0</div>
+        </article>
+
+        <article class="kpi-card animate-in" style="--d:.15s">
+            <div class="kpi-head">
+                <div class="kpi-icon soft-red"><i class="bi bi-exclamation-octagon"></i></div>
+                <div class="kpi-titles">
+                    <h4 class="kpi-title">Sanciones activas</h4>
+                    <p class="kpi-sub">Estudiantes</p>
+                </div>
+            </div>
+            <div class="kpi-value" th:attr="data-target=${sancionesActivas}" th:text="${sancionesActivas}">0</div>
+        </article>
+    </section>
+
+    <!-- Superadmin -->
+    <section th:if="${#strings.equalsIgnoreCase(userRole, 'superadmin')
+               or #strings.equalsIgnoreCase(#authentication?.authorities[0]?.authority?.replace('ROLE_',''), 'SUPERADMIN')}"
+             class="superadmin-block animate-in">
+        <div class="section-head">
+            <h3><i class="bi bi-shield-fill-check"></i> Panel Super Administrador</h3>
+            <p class="muted">Accesos rápidos a módulos críticos</p>
+        </div>
+
+        <div class="actions-grid">
+            <a class="action-card animate-in hover-lift tone-danger" th:href="@{/administrador/listar}">
+                <i class="bi bi-people-fill"></i>
+                <div><h4>Administradores</h4><p>Gestionar usuarios admin</p></div>
+            </a>
+
+            <a class="action-card animate-in hover-lift tone-primary" style="--d:.05s" th:href="@{/solicitudes}">
+                <i class="bi bi-collection"></i>
+                <div><h4>Solicitudes</h4><p>Ver y gestionar solicitudes</p></div>
+            </a>
+
+            <a class="action-card animate-in hover-lift tone-success" style="--d:.1s" th:href="@{/laptops}">
+                <i class="bi bi-laptop"></i>
+                <div><h4>Laptops</h4><p>Ver todos los préstamos</p></div>
+            </a>
+
+            <a class="action-card animate-in hover-lift tone-amber" style="--d:.15s" th:href="@{/sanciones/admin/listar}">
+                <i class="bi bi-exclamation-triangle"></i>
+                <div><h4>Sanciones</h4><p>Gestionar sanciones</p></div>
+            </a>
+        </div>
+    </section>
+
+    <!-- No superadmin -->
+    <section class="actions-grid"
+             th:if="${!(#strings.equalsIgnoreCase(userRole, 'superadmin')
+                  or #strings.equalsIgnoreCase(#authentication?.authorities[0]?.authority?.replace('ROLE_',''), 'SUPERADMIN'))}">
+        <a class="action-card animate-in hover-lift" th:href="@{/solicitudes}">
+            <i class="bi bi-inboxes"></i>
+            <div><h4>Solicitudes</h4><p>Lista y gestión</p></div>
+        </a>
+
+        <a class="action-card animate-in hover-lift" style="--d:.05s" th:href="@{/laptops}">
+            <i class="bi bi-gpu-card"></i>
+            <div><h4>Inventario</h4><p>Alta, baja y control</p></div>
+        </a>
+
+        <a class="action-card animate-in hover-lift" style="--d:.1s" th:href="@{/sanciones/admin/listar}">
+            <i class="bi bi-shield"></i>
+            <div><h4>Sanciones</h4><p>Alertas y estado</p></div>
+        </a>
+    </section>
+
+    <!-- Paneles -->
+    <section class="panels-grid">
+        <div class="panel-card animate-in">
+            <div class="panel-head"><h3><i class="bi bi-card-text"></i> Solicitudes Recientes</h3></div>
+            <ul class="list">
+                <li class="list-item" th:each="loan : ${solicitudesRecientes}">
+                    <div class="list-main">
+                        <strong th:text="${loan.user != null ? loan.user.fullName : 'Desconocido'}">Nombre</strong>
+                        <span class="muted"
+                              th:text="${(loan.user != null and loan.user.studentId != null and !#strings.isEmpty(loan.user.studentId))
+                   ? 'Carnet: ' + loan.user.studentId : 'Carnet: -'}">Carnet: -</span>
+                    </div>
+                    <div class="list-meta">
+                        <span class="chip warn"    th:if="${loan.status == 'pending'}">Pendiente</span>
+                        <span class="chip success" th:if="${loan.status == 'approved'}">Aprobada</span>
+                        <span class="chip error"   th:if="${loan.status == 'rejected'}">Rechazada</span>
+                        <time class="muted" th:text="${loan.requestedAt != null ? #temporals.format(loan.requestedAt, 'dd/MM HH:mm') : '—'}">—</time>
+                    </div>
+                </li>
+                <li class="list-item" th:if="${#lists.isEmpty(solicitudesRecientes)}">
+                    <div class="list-main"><strong>No hay solicitudes recientes</strong></div>
+                </li>
+            </ul>
+        </div>
+
+        <div class="panel-card animate-in" style="--d:.05s">
+            <div class="panel-head"><h3><i class="bi bi-tools"></i> Laptops en reparación</h3></div>
+            <ul class="list">
+                <li class="list-item" th:each="lp : ${laptopsEnReparacion}">
+                    <div class="list-main">
+                        <strong th:text="${lp.assetTag}">LP-000</strong>
+                        <span class="muted" th:text="${lp.model != null ? lp.model : 'Modelo no especificado'}">Modelo</span>
+                        <span class="tag danger" th:text="${lp.conditionDescription != null ? lp.conditionDescription : 'En reparación'}">En reparación</span>
+                    </div>
+                    <div class="list-meta">
+                        <time class="muted" th:text="${#temporals.format(lp.updatedAt != null ? lp.updatedAt : lp.createdAt, 'dd/MM HH:mm')}">--</time>
+                        <span class="badge danger">repair</span>
+                    </div>
+                </li>
+                <li class="list-item" th:if="${#lists.isEmpty(laptopsEnReparacion)}">
+                    <div class="list-main">
+                        <strong>No hay laptops en reparación</strong>
+                        <span class="muted">¡Todo en orden!</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <div class="panel-card animate-in" style="--d:.1s">
+            <div class="panel-head">
+                <h3><i class="bi bi-hourglass-split"></i> Por vencer (25 min)</h3> <!-- actualizado -->
+            </div>
+            <ul class="list">
+                <li class="list-item" th:each="loan : ${porVencerLista}">
+                    <div class="list-main">
+                        <strong th:text="${loan.user != null ? loan.user.fullName : '—'}">—</strong>
+                        <span class="muted"
+                              th:text="${(loan.user != null and loan.user.studentId != null and !#strings.isEmpty(loan.user.studentId))
+                   ? 'Carnet: ' + loan.user.studentId : 'Carnet: -'}">Carnet: -</span>
+                    </div>
+                    <div class="list-meta">
+                        <time class="muted"
+                              th:title="${loan.deliveredAt != null && loan.requestedHours != null
+                   ? #temporals.format(loan.deliveredAt.plusHours(loan.requestedHours), 'yyyy-MM-dd HH:mm') : ''}"
+                              th:text="${loan.deliveredAt != null && loan.requestedHours != null
+                   ? #temporals.format(loan.deliveredAt.plusHours(loan.requestedHours), 'dd/MM HH:mm') : '—'}">—</time>
+                        <span class="badge warn">vence</span>
+                    </div>
+                </li>
+                <li class="list-item" th:if="${#lists.isEmpty(porVencerLista)}">
+                    <div class="list-main">
+                        <strong>Sin vencimientos próximos</strong>
+                        <span class="muted">Los próximos 25 min están libres</span> <!-- actualizado -->
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </section>
+</main>
+
+<footer class="app-footer container">
+    <span>© <span th:text="${#dates.format(#dates.createNow(),'yyyy')}">2025</span> LapSync</span>
+    <span class="muted">Panel de administración</span>
+</footer>
+
+<script defer th:src="@{/js/theme.js}" src="/js/theme.js"></script>
+<script>
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (!prefersReduced) {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+      }, { threshold: 0.12 });
+      document.querySelectorAll('.animate-in').forEach(el => io.observe(el));
+    } else {
+      document.querySelectorAll('.animate-in').forEach(el => el.classList.add('in'));
+    }
+
+    // Contadores KPI (más suaves)
+    function animateCounter(el, duration = 800) {
+      const target = Number(el.getAttribute('data-target') || el.textContent.trim());
+      const startTs = performance.now();
+      function step(ts) {
+        const p = Math.min((ts - startTs) / duration, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = Math.floor(target * eased);
+        if (p < 1) requestAnimationFrame(step);
+        else el.textContent = String(target);
+      }
+      requestAnimationFrame(step);
+    }
+    if (!prefersReduced) document.querySelectorAll('.kpi-value').forEach(el => animateCounter(el));
+</script>
+</body>
+</html>

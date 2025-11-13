@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Solicitud de Préstamo</title>
+
+    <!-- Fuente & Iconos -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" />
+
+    <!-- Estilos globales de tu app -->
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css" />
+
+    <!-- Fijar tema antes de pintar -->
+    <script>
+        (function(){
+          try{
+            const key = 'theme_student';
+            const t = localStorage.getItem(key)
+              || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', t);
+            document.documentElement.style.colorScheme = t;
+          }catch(e){}
+        })();
+    </script>
+
+    <!-- Ajustes locales -->
+    <style>
+        .page-wrap{ width:min(900px,96%); margin-inline:auto; display:grid; gap:16px }
+        .toolbar{
+          display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px;
+          padding:12px 16px;
+        }
+        .crumbs{ display:flex; align-items:center; gap:8px }
+        .chip-link{
+          display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px;
+          text-decoration:none; font-weight:700; color:var(--text); background:var(--panel);
+          border:1px solid var(--border-soft); box-shadow:var(--shadow-1); transition:transform .15s, box-shadow .2s;
+        }
+        .chip-link:hover{ transform:translateY(-2px); box-shadow:var(--shadow-2) }
+        .chip-link i{ color:var(--primary) }
+
+        .panel-title{ display:flex; flex-direction:column; gap:2px; align-items:flex-start }
+        .panel-title-text{ margin:0; font-weight:800; letter-spacing:.2px; display:flex; align-items:center; gap:8px;
+          font-size:clamp(16px,1.9vw,18px) }
+        .panel-title .meta{ margin:0; color:var(--muted); font-size:12px }
+
+        .actions{ display:flex; align-items:center; gap:8px }
+        .actions form{ margin:0 }
+
+        @media (max-width:760px){
+          .toolbar{ grid-template-columns:1fr; text-align:center }
+          .panel-title{ align-items:center }
+          .actions{ justify-content:center; flex-wrap:wrap }
+          .crumbs{ justify-content:center }
+        }
+
+        /* Notas de estado */
+        .note{ border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:10px; }
+        .note.warn{ border:1px solid var(--badge-warn-border); background:var(--badge-warn-bg); color:var(--badge-warn-text) }
+        .note.success{ border:1px solid var(--chip-success-border); background:var(--chip-success-bg); color:var(--chip-success-text) }
+
+        /* Limitar ancho del panel del formulario */
+        .form-panel{ max-width:760px; margin-inline:auto }
+    </style>
+</head>
+<body>
+
+<main class="container app-main">
+
+    <!-- Barra superior -->
+    <section class="panel-bar page-wrap toolbar">
+        <div class="crumbs">
+            <a th:href="@{/estudiante/inicio}" class="chip-link">
+                <i class="bi bi-house-door"></i> <span>Inicio</span>
+            </a>
+        </div>
+
+        <div class="panel-title">
+            <h1 class="panel-title-text"><i class="bi bi-laptop"></i> Solicitud de Préstamo</h1>
+            <p class="meta">Completa el formulario para solicitar una laptop</p>
+        </div>
+
+        <div class="actions">
+            <button type="button" id="themeToggle" class="btn btn-ghost theme-toggle" title="Cambiar tema">
+                <i class="bi bi-brightness-high sun"></i>
+                <i class="bi bi-moon moon"></i>
+            </button>
+        </div>
+    </section>
+
+    <!-- Mensajes -->
+    <section class="page-wrap" th:if="${warningMessage}">
+        <div class="note warn">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span th:text="${warningMessage}">Atención</span>
+        </div>
+    </section>
+    <section class="page-wrap" th:if="${successMessage}">
+        <div class="note success">
+            <i class="bi bi-check-circle-fill"></i>
+            <span th:text="${successMessage}">Operación exitosa</span>
+        </div>
+    </section>
+
+    <!-- Formulario -->
+    <section class="panel-card page-wrap animate-in in form-panel" style="--d:.04s">
+        <div class="panel-head">
+            <h3><i class="bi bi-ui-checks-grid"></i> Formulario</h3>
+        </div>
+
+        <div style="padding:16px 18px">
+            <form th:action="@{/loans/save}" method="post" th:object="${loan}" class="form-grid">
+                <!-- Nombre -->
+                <div class="field">
+                    <label class="label">Nombre completo</label>
+                    <input type="text" class="input" th:field="*{user.fullName}" readonly>
+                    <div class="help">Se obtiene de tu perfil</div>
+                </div>
+
+                <!-- Email -->
+                <div class="field">
+                    <label class="label">Correo electrónico</label>
+                    <input type="email" class="input" th:field="*{user.email}" readonly>
+                    <div class="help">Correo institucional</div>
+                </div>
+
+                <!-- Carnet -->
+                <div class="field">
+                    <label class="label">Carnet N.</label>
+                    <input type="text" class="input"
+                           th:field="*{user.studentId}" placeholder="Ejemplo: SA24001"
+                           pattern="[A-Za-z]{2}[0-9]{4,6}" required>
+                    <div class="help">Formato sugerido: 2 letras + 4–6 dígitos (p. ej. SA24001)</div>
+                </div>
+
+                <!-- Carrera -->
+                <div class="field">
+                    <label class="label">Carrera</label>
+                    <select class="select" th:field="*{user.career}" required>
+                        <option value="" disabled selected>-- Selecciona una carrera --</option>
+                        <option value="Técnico en Ingeniería de Desarrollo  de Software">Técnico en Ingeniería de Desarrollo  de Software</option>
+                        <option value="Técnico en Gestión y Desarrollo Turístico">Técnico en Gestión y Desarrollo Turístico</option>
+                        <option value="Técnico en Ingeniería Eléctrica">Técnico en Ingeniería Eléctrica</option>
+                        <option value="Técnico en Mercadeo">Técnico en Mercadeo</option>
+                    </select>
+                </div>
+
+                <!-- DUI -->
+                <div class="field">
+                    <label class="label">DUI</label>
+                    <input type="text" class="input"
+                           th:field="*{user.nationalId}" placeholder="Ejemplo: 01234567-8"
+                           pattern="[0-9]{8}-[0-9]{1}" required>
+                    <div class="help">8 dígitos + guion + 1 dígito (p. ej. 01234567-8)</div>
+                </div>
+
+                <!-- Horas solicitadas -->
+                <div class="field">
+                    <label class="label">Horas solicitadas</label>
+                    <select class="select" th:field="*{requestedHours}" required>
+                        <option value="" disabled selected>-- Selecciona la cantidad de horas --</option>
+                        <option value="1">1 hora</option>
+                        <option value="2">2 horas</option>
+                        <option value="3">3 horas</option>
+                        <option value="4">4 horas</option>
+                    </select>
+                    <div class="help">Máximo 4 horas por día</div>
+                </div>
+
+                <!-- Términos -->
+                <div class="field" style="grid-column:1 / -1">
+                    <label class="label">Términos</label>
+                    <label class="input" style="display:flex; gap:10px; align-items:center; padding:10px 12px">
+                        <input class="" type="checkbox" th:field="*{termsAccepted}" required>
+                        <span>Acepto los términos y condiciones del servicio</span>
+                    </label>
+                </div>
+
+                <!-- Botones -->
+                <div class="form-actions" style="grid-column:1 / -1">
+                    <a href="javascript:history.back()" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send-fill"></i> Enviar solicitud
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- Aviso de privacidad / ayuda -->
+    <section class="page-wrap">
+        <p class="muted" style="text-align:center; font-size:12px">
+            La información será validada por el personal autorizado. Asegúrate de que tus datos sean correctos.
+        </p>
+    </section>
+
+</main>
+
+<footer class="app-footer container">
+    <span>© <span th:text="${#dates.format(#dates.createNow(),'yyyy')}">2025</span> LapSync</span>
+    <span class="muted">Área de estudiante</span>
+</footer>
+
+<!-- Toggle de tema -->
+<script>
+    (function(){
+      const btn = document.getElementById('themeToggle');
+      if(!btn) return;
+      btn.addEventListener('click', function(){
+        const root = document.documentElement;
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        root.style.colorScheme = next;
+        try{ localStorage.setItem('theme', next); }catch(e){}
+      });
+    })();
+</script>
+
+</body>
+</html>

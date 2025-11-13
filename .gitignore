@@ -1,0 +1,60 @@
+# =========================
+# Build / Maven
+# =========================
+target/
+# Si usas el wrapper de Maven, normalmente se versiona:
+!.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
+
+# Reportes temporales de tests
+surefire-reports/
+failsafe-reports/
+
+# =========================
+# IDEs
+# =========================
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# VS Code
+.vscode/
+
+# Eclipse / STS
+.classpath
+.project
+.settings/
+.apt_generated
+.springBeans
+.sts4-cache
+.factorypath
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+.nb-gradle/
+
+# =========================
+# SO / Misceláneos
+# =========================
+.DS_Store
+Thumbs.db
+*.log
+
+# =========================
+# Config / Secretos
+# =========================
+# (no subas tus props reales)
+src/main/resources/application.properties
+src/main/resources/application-*.properties
+
+# Mantener el template visible en el repo
+!src/main/resources/application.properties.example
+
+# Archivos de entorno locales
+*.env
+.env

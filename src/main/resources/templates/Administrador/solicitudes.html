@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Usuarios con Solicitudes Recientes - LapSync</title>
+
+    <!-- Inter + íconos -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" />
+
+    <!-- CSS global -->
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css" />
+
+    <!-- Aplica tema guardado antes de pintar -->
+    <script>
+        !function(){
+          try{
+            const key='theme_admin';
+            var t = localStorage.getItem(key) || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light');
+            document.documentElement.setAttribute('data-theme', t);
+            document.documentElement.style.colorScheme = t;
+          }catch(e){}
+        }();
+    </script>
+
+    <!-- Estilos locales mínimos -->
+    <style>
+        .toolbar{ display:flex; align-items:center; justify-content:space-between; gap:12px;
+          padding:14px 16px; border-bottom:1px solid var(--border-soft); }
+        .toolbar-left{ display:flex; gap:10px; align-items:center; flex:1; min-width:0 }
+        .searchbox{ display:flex; align-items:center; gap:10px; flex:1; min-width:180px;
+          background:var(--panel); border:1px solid var(--border-soft); border-radius:14px; padding:10px 12px; box-shadow:var(--shadow-1) }
+        .searchbox input{ flex:1; border:0; outline:0; background:transparent; color:var(--text); font:inherit }
+        .toolbar-right{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
+        .card-centered{ width:min(1100px, 96%); margin-inline:auto }
+
+        /* Tabla (desktop) */
+        .table-wrap{ margin:14px 16px 18px; border-radius:16px; border:1px solid var(--border-soft); box-shadow:var(--shadow-1); background:var(--panel) }
+        table.loans{ width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed }
+        table.loans thead th{
+          text-align:left; font-weight:800; font-size:13px; letter-spacing:.2px; color:var(--text);
+          background:linear-gradient(180deg, rgba(124,58,237,.08), rgba(124,58,237,.03));
+          border-bottom:1px solid var(--border-soft); padding:12px 14px; position:sticky; top:0; z-index:1;
+        }
+        html[data-theme="dark"] table.loans thead th{
+          background:linear-gradient(180deg, rgba(124,58,237,.12), rgba(255,255,255,.02));
+        }
+        table.loans tbody td{ padding:12px 14px; border-bottom:1px solid var(--border-soft); white-space:nowrap }
+        table.loans tbody tr:hover{ background:linear-gradient(180deg, rgba(124,58,237,.06), rgba(124,58,237,.02)) }
+
+        @media (min-width: 980px){
+          table.loans th:nth-child(1), table.loans td:nth-child(1){ width:170px }
+          table.loans th:nth-child(2), table.loans td:nth-child(2){ width:260px }
+          table.loans th:nth-child(3), table.loans td:nth-child(3){ width:260px }
+          table.loans th:nth-child(4), table.loans td:nth-child(4){ width:320px }
+          table.loans th:nth-child(5), table.loans td:nth-child(5){ width:150px }
+        }
+
+        .ellipsis{ display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+
+        /* Cards móviles */
+        .cards{ display:none; padding:0 16px 16px }
+        .loan-card{ margin-top:12px; background:var(--panel); border:1px solid var(--border-soft); border-radius:16px; box-shadow:var(--shadow-1); padding:14px; display:grid; gap:8px }
+        .card-row{ display:flex; gap:8px; align-items:center }
+        .card-row .k{ width:120px; color:var(--muted); font-size:12px; font-weight:700 }
+        .card-row .v{ flex:1; min-width:0 }
+        .card-actions{ display:flex; justify-content:flex-end }
+
+        .pager{ padding:10px 16px 16px; display:flex; align-items:center; justify-content:space-between; color:var(--muted) }
+        .pager .buttons{ display:flex; gap:8px }
+        .pager .buttons .btn{ min-width:38px; height:38px; display:inline-flex; align-items:center; justify-content:center }
+
+        .show-desktop{ display:block }
+        .show-mobile{ display:none }
+        @media (max-width: 780px){
+          .show-desktop{ display:none }
+          .show-mobile{ display:block }
+          .cards{ display:block }
+        }
+    </style>
+</head>
+<body>
+<!-- Header -->
+<header class="app-header">
+    <div class="brand">
+        <i class="bi bi-laptop"></i>
+        <div class="brand-text">
+            <span class="title">LapSync</span>
+            <span class="subtitle">Sistema de Préstamos</span>
+        </div>
+    </div>
+    <div class="header-actions">
+        <button id="themeToggle" class="btn btn-ghost theme-toggle" title="Cambiar tema" aria-label="Cambiar tema">
+            <i class="bi bi-sun-fill sun"></i>
+            <i class="bi bi-moon-stars-fill moon"></i>
+        </button>
+        <a th:href="@{/administrador/dashboard}" class="btn btn-secondary"><i class="bi bi-house"></i> Dashboard</a>
+    </div>
+</header>
+
+<main class="app-main">
+    <!-- Panel bar con botón Volver a la izquierda -->
+    <section class="panel-bar centered-block animate-in in">
+        <div class="panel-left">
+            <a th:href="@{/administrador/dashboard}" class="btn btn-secondary btn-back"><i class="bi bi-arrow-left"></i> Volver</a>
+            <div class="title">
+                <i class="bi bi-people"></i>
+                <div>
+                    <div style="font-weight:800">Usuarios con Solicitudes Recientes</div>
+                    <p class="meta">Últimas solicitudes registradas por estudiantes</p>
+                </div>
+            </div>
+        </div>
+        <p class="meta" th:text="${#lists.size(usuarios)} + ' registros'">0 registros</p>
+    </section>
+
+    <!-- Contenedor principal -->
+    <section class="panel-card card-centered animate-in in">
+        <!-- Herramientas (solo búsqueda + perPage) -->
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <div class="searchbox">
+                    <i class="bi bi-search"></i>
+                    <input id="q" type="search" placeholder="Buscar por nombre, email o carrera…" />
+                </div>
+            </div>
+            <div class="toolbar-right">
+                <label class="muted" for="perPage">Por página</label>
+                <select id="perPage" class="select">
+                    <option>10</option><option>20</option><option>50</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Tabla (desktop) -->
+        <div class="table-wrap show-desktop">
+            <table class="loans" id="loansTable">
+                <thead>
+                <tr>
+                    <th>Fecha de Solicitud</th>
+                    <th>Estudiante</th>
+                    <th>Email</th>
+                    <th>Carrera</th>
+                    <th>Acciones</th>
+                </tr>
+                </thead>
+                <tbody id="tbody">
+                <tr th:each="loan : ${usuarios}">
+                    <td th:text="${loan.requestedAt != null ? #temporals.format(loan.requestedAt, 'dd/MM/yyyy HH:mm') : '—'}">—</td>
+                    <td><span class="ellipsis" th:title="${loan.user != null ? loan.user.fullName : ''}"
+                              th:text="${loan.user != null ? loan.user.fullName : 'Desconocido'}">Nombre</span></td>
+                    <td><span class="ellipsis" th:title="${loan.user != null ? loan.user.email : ''}"
+                              th:text="${loan.user != null ? loan.user.email : '—'}">correo@ejemplo.com</span></td>
+                    <td><span class="ellipsis" th:title="${loan.user != null ? (loan.user.career ?: '') : ''}"
+                              th:text="${loan.user != null ? (loan.user.career ?: '—') : '—'}">Carrera</span></td>
+                    <td class="row-actions">
+                        <a th:href="@{'/solicitudes-usuario/' + ${loan.user.id}}" class="btn btn-secondary">
+                            <i class="bi bi-journal-text"></i> Ver préstamos
+                        </a>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(usuarios)}">
+                    <td colspan="5" style="text-align:center; color:var(--muted); padding:36px 12px">
+                        <i class="bi bi-inbox"></i><br/>No hay solicitudes recientes
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Cards (mobile) -->
+        <div class="cards show-mobile" id="cards">
+            <div class="loan-card" th:each="loan, idx : ${usuarios}">
+                <div class="card-row"><span class="k">Fecha</span>
+                    <span class="v" th:text="${loan.requestedAt != null ? #temporals.format(loan.requestedAt, 'dd/MM/yyyy HH:mm') : '—'}">—</span>
+                </div>
+                <div class="card-row"><span class="k">Estudiante</span>
+                    <span class="v ellipsis" th:title="${loan.user != null ? loan.user.fullName : ''}"
+                          th:text="${loan.user != null ? loan.user.fullName : 'Desconocido'}">Nombre</span>
+                </div>
+                <div class="card-row"><span class="k">Email</span>
+                    <span class="v ellipsis" th:title="${loan.user != null ? loan.user.email : ''}"
+                          th:text="${loan.user != null ? loan.user.email : '—'}">correo@ejemplo.com</span>
+                </div>
+                <div class="card-row"><span class="k">Carrera</span>
+                    <span class="v ellipsis" th:title="${loan.user != null ? (loan.user.career ?: '') : ''}"
+                          th:text="${loan.user != null ? (loan.user.career ?: '—') : '—'}">Carrera</span>
+                </div>
+                <div class="card-actions">
+                    <a class="btn btn-secondary" th:href="@{'/solicitudes-usuario/' + ${loan.user.id}}">
+                        <i class="bi bi-journal-text"></i> Ver préstamos
+                    </a>
+                </div>
+            </div>
+
+            <div class="loan-card" th:if="${#lists.isEmpty(usuarios)}" style="text-align:center; color:var(--muted)">
+                <i class="bi bi-inbox"></i><br/>No hay solicitudes recientes
+            </div>
+        </div>
+
+        <!-- Paginación -->
+        <div class="pager">
+            <span id="info">Mostrando 0–0 de 0</span>
+            <div class="buttons">
+                <button class="btn btn-secondary" id="prev" aria-label="Anterior"><i class="bi bi-chevron-left"></i></button>
+                <button class="btn btn-secondary" id="next" aria-label="Siguiente"><i class="bi bi-chevron-right"></i></button>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer class="app-footer container">
+    <span>© <span th:text="${#dates.format(#dates.createNow(),'yyyy')}">2025</span> LapSync</span>
+    <span class="muted">Panel de administración</span>
+</footer>
+
+<!-- Toggle de tema + búsqueda y paginación -->
+<script>
+    // Toggle de tema (muestra solo un ícono gracias a .theme-toggle en app.css)
+    (function(){
+      const btn = document.getElementById('themeToggle');
+      if(!btn) return;
+      btn.addEventListener('click', () => {
+        const cur = document.documentElement.getAttribute('data-theme') || 'light';
+        const nxt = cur === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', nxt);
+        document.documentElement.style.colorScheme = nxt;
+        try{ localStorage.setItem('theme', nxt); }catch(e){}
+      });
+    })();
+
+    // Lógica simple búsqueda + paginación
+    document.addEventListener('DOMContentLoaded', () => {
+      const q = document.getElementById('q');
+      const perPageSel = document.getElementById('perPage');
+
+      const tbody = document.getElementById('tbody');
+      const rows = Array.from(tbody ? tbody.querySelectorAll('tr') : []);
+      const cardsWrap = document.getElementById('cards');
+      const cards = Array.from(cardsWrap ? cardsWrap.querySelectorAll('.loan-card') : []);
+
+      const info = document.getElementById('info');
+      const prev = document.getElementById('prev');
+      const next = document.getElementById('next');
+
+      let page = 1;
+      let perPage = parseInt(perPageSel.value, 10);
+      let filteredIdx = [];
+
+      const isDataRow = (el) => !el.querySelector('td[colspan]');
+      const baseRows = rows.filter(isDataRow);
+      const baseCards = cards.filter(c => !c.hasAttribute('th:if'));
+
+      function computeFilter() {
+        const term = (q.value || '').toLowerCase().trim();
+        const size = baseRows.length;
+
+        filteredIdx = [];
+        for (let i = 0; i < size; i++) {
+          const textRow = baseRows[i].textContent.toLowerCase();
+          const textCard = baseCards[i] ? baseCards[i].textContent.toLowerCase() : '';
+          if (!term || textRow.includes(term) || textCard.includes(term)) {
+            filteredIdx.push(i);
+          }
+        }
+        page = 1;
+      }
+
+      function render() {
+        const total = filteredIdx.length;
+        perPage = parseInt(perPageSel.value, 10) || 10;
+        const maxPage = Math.max(1, Math.ceil(total / perPage));
+        page = Math.min(page, maxPage);
+
+        baseRows.forEach(r => r.style.display = 'none');
+        baseCards.forEach(c => c.style.display = 'none');
+
+        const start = (page - 1) * perPage;
+        const end = Math.min(start + perPage, total);
+
+        for (let k = start; k < end; k++) {
+          const idx = filteredIdx[k];
+          if (baseRows[idx]) baseRows[idx].style.display = '';
+          if (baseCards[idx]) baseCards[idx].style.display = '';
+        }
+
+        info.textContent = total === 0 ? 'Mostrando 0–0 de 0' : `Mostrando ${start + 1}–${end} de ${total}`;
+        prev.disabled = page <= 1;
+        next.disabled = page >= maxPage;
+      }
+
+      prev.addEventListener('click', () => { page--; render(); });
+      next.addEventListener('click', () => { page++; render(); });
+      perPageSel.addEventListener('change', () => { page = 1; render(); });
+      q.addEventListener('input', () => { computeFilter(); render(); });
+
+      computeFilter();
+      render();
+    });
+</script>
+</body>
+</html>

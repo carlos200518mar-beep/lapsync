@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Gestión de Sanciones - Admin</title>
+
+    <!-- Fuente & iconos -->
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css"/>
+
+    <!-- Estilos globales -->
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css"/>
+
+    <!-- SweetAlert -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- CSRF para peticiones fetch -->
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+
+    <!-- Fijar tema antes de pintar -->
+    <script>
+        !function(){
+          try{
+            const key = 'theme_admin';
+            const t = localStorage.getItem(key)
+              || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light');
+            document.documentElement.setAttribute('data-theme', t);
+            document.documentElement.style.colorScheme = t;
+          }catch(e){}
+        }();
+    </script>
+
+    <!-- Estilos del subnav centrado y tabla -->
+    <style>
+        .page-wrap{ width:min(1100px,96%); margin-inline:auto; display:grid; gap:16px }
+
+        .subnav{
+          background:var(--panel);
+          border:1px solid var(--border-soft);
+          border-radius:var(--radius);
+          box-shadow:var(--shadow-1);
+          padding:12px 14px;
+          display:grid; gap:8px;
+        }
+        .subnav__top{
+          display:grid;
+          grid-template-columns:1fr auto 1fr;
+          grid-template-areas:"left center right";
+          align-items:center; gap:10px;
+        }
+        .subnav__left{ grid-area:left; display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+        .subnav__center{ grid-area:center; display:flex; flex-direction:column; align-items:center; gap:2px; text-align:center }
+        .subnav__right{ grid-area:right; display:flex; gap:8px; align-items:center; justify-content:flex-end; flex-wrap:wrap }
+
+        .subnav__title{ margin:0; font-weight:800; letter-spacing:.2px; display:flex; gap:8px; align-items:center; font-size:clamp(16px,1.9vw,18px) }
+        .subnav__subtitle{ margin:0; color:var(--muted); font-size:12px }
+
+        .subnav__actions{ display:flex; justify-content:center; gap:8px; flex-wrap:wrap; padding-top:2px }
+
+        .btn-compact{ height:36px; padding:8px 12px; border-radius:12px; display:inline-flex; align-items:center; gap:8px }
+        .btn-icon{ width:36px; height:36px; padding:0; border-radius:12px; display:grid; place-items:center }
+
+        @media (max-width:760px){
+          .subnav__top{ grid-template-columns:auto 1fr auto }
+        }
+
+        .kpi-grid{ display:grid; gap:16px; grid-template-columns:repeat(4,minmax(180px,1fr)) }
+        @media (max-width:980px){ .kpi-grid{ grid-template-columns:repeat(2,minmax(180px,1fr)) } }
+        @media (max-width:560px){ .kpi-grid{ grid-template-columns:1fr } }
+
+        .table-toolbar{ padding:12px 16px; border-bottom:1px solid var(--border-soft);
+          display:flex; align-items:center; justify-content:space-between; gap:12px; }
+        .actions-cell{ text-align:center }
+        .action-group{ display:inline-grid; grid-auto-flow:column; gap:8px; align-items:center; justify-content:center }
+        .desc-ellipsis{ max-width:360px; display:inline-block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+        .data-table tbody tr:hover{ transform:translateY(-1px) }
+
+        .notice{ border:1px solid var(--border-soft); background:var(--panel); border-radius:14px;
+          box-shadow:var(--shadow-1); padding:12px 14px; display:flex; gap:10px; align-items:center; justify-content:space-between; }
+        .notice .left{ display:flex; gap:10px; align-items:center }
+        .notice.success .icon{ color:var(--green) }
+        .notice.error .icon{ color:var(--red) }
+    </style>
+</head>
+<body>
+
+<main class="container app-main">
+
+    <!-- ===== SUBNAV centrado ===== -->
+    <section class="page-wrap subnav">
+        <div class="subnav__top">
+            <div class="subnav__left">
+                <a th:href="@{/administrador/dashboard}" class="btn btn-secondary btn-compact">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+            </div>
+
+            <div class="subnav__center">
+                <h1 class="subnav__title"><i class="bi bi-shield-exclamation"></i> Gestión de Sanciones</h1>
+                <p class="subnav__subtitle">Panel de administración</p>
+            </div>
+
+            <div class="subnav__right">
+                <button type="button" id="themeToggle" class="btn btn-ghost theme-toggle btn-icon" title="Cambiar tema">
+                    <i class="bi bi-brightness-high sun"></i>
+                    <i class="bi bi-moon moon"></i>
+                </button>
+                <form th:action="@{/logout}" method="post" style="margin:0">
+                    <button type="submit" class="btn btn-danger btn-compact">
+                        <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="subnav__actions">
+            <a th:href="@{/sanciones/admin/crear}" class="btn btn-primary btn-compact">
+                <i class="bi bi-plus-lg"></i> Nueva sanción
+            </a>
+            <a th:href="@{/sanciones/admin/exportar}" class="btn btn-ghost btn-compact" title="Exportar CSV">
+                <i class="bi bi-file-earmark-spreadsheet"></i> CSV
+            </a>
+            <button type="button" class="btn btn-ghost btn-compact" onclick="exportarPDF()" title="Exportar PDF">
+                <i class="bi bi-file-earmark-pdf"></i> PDF
+            </button>
+        </div>
+    </section>
+
+    <!-- ===== Mensajes (opcional) ===== -->
+    <section class="page-wrap" th:if="${mensaje}">
+        <div class="notice" th:classappend="${tipoMensaje == 'success'} ? ' success' : ' error'">
+            <div class="left">
+                <i class="icon bi" th:classappend="${tipoMensaje == 'success'} ? ' bi-check-circle-fill' : ' bi-exclamation-triangle-fill'"></i>
+                <span th:text="${mensaje}">Mensaje</span>
+            </div>
+            <button type="button" class="btn btn-ghost btn-xs" onclick="this.closest('.notice').remove()">
+                <i class="bi bi-x-lg"></i> Cerrar
+            </button>
+        </div>
+    </section>
+
+    <!-- ===== KPIs ===== -->
+    <section class="kpi-grid page-wrap">
+        <div class="kpi-card in">
+            <div class="kpi-head">
+                <div class="kpi-icon soft-violet"><i class="bi bi-list-ul"></i></div>
+                <div><p class="kpi-title">Total sanciones</p><p class="kpi-sub">Todas</p></div>
+            </div>
+            <div class="kpi-value" th:text="${todasSanciones != null ? #lists.size(todasSanciones) : 0}">0</div>
+        </div>
+        <div class="kpi-card in">
+            <div class="kpi-head">
+                <div class="kpi-icon soft-amber"><i class="bi bi-exclamation-triangle"></i></div>
+                <div><p class="kpi-title">Activas</p><p class="kpi-sub">Pendientes</p></div>
+            </div>
+            <div class="kpi-value" th:text="${sancionesActivas != null ? #lists.size(sancionesActivas) : 0}">0</div>
+        </div>
+        <div class="kpi-card in">
+            <div class="kpi-head">
+                <div class="kpi-icon soft-blue"><i class="bi bi-check-circle"></i></div>
+                <div><p class="kpi-title">Resueltas</p><p class="kpi-sub">Cerradas</p></div>
+            </div>
+            <div class="kpi-value" th:text="${sancionesResueltas != null ? #lists.size(sancionesResueltas) : 0}">0</div>
+        </div>
+        <div class="kpi-card in">
+            <div class="kpi-head">
+                <div class="kpi-icon soft-red"><i class="bi bi-person-x"></i></div>
+                <div><p class="kpi-title">Bloqueados</p><p class="kpi-sub">Acceso restringido</p></div>
+            </div>
+            <div class="kpi-value" th:text="${estudiantesBloqueados != null ? estudiantesBloqueados : 0}">0</div>
+        </div>
+    </section>
+
+    <!-- ===== Filtros (FORM INDEPENDIENTE) ===== -->
+    <section class="panel-card page-wrap animate-in in">
+        <div class="panel-head"><h3><i class="bi bi-funnel"></i> Filtros</h3></div>
+        <div style="padding:16px 18px">
+            <form th:action="@{/sanciones/admin/filtrar}" method="get" class="form-grid">
+                <div class="field">
+                    <label class="label">Tipo de Sanción</label>
+                    <select name="tipo" class="select" th:value="${tipoFiltro}">
+                        <option value="">Todos los tipos</option>
+                        <option value="Daño físico" th:selected="${tipoFiltro == 'Daño físico'}">Daño físico</option>
+                        <option value="Exceso de tiempo" th:selected="${tipoFiltro == 'Exceso de tiempo'}">Exceso de tiempo</option>
+                        <option value="Sacar equipo fuera de institución" th:selected="${tipoFiltro == 'Sacar equipo fuera de institución'}">Sacar equipo fuera</option>
+                        <option value="Mora" th:selected="${tipoFiltro == 'Mora'}">Mora en devolución</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label class="label">Estado</label>
+                    <select name="estado" class="select" th:value="${estadoFiltro}">
+                        <option value="">Todos los estados</option>
+                        <option value="activas" th:selected="${estadoFiltro == 'activas'}">Solo activas</option>
+                        <option value="resueltas" th:selected="${estadoFiltro == 'resueltas'}">Solo resueltas</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label class="label">Estudiante</label>
+                    <input type="text" name="estudiante" class="input" placeholder="Buscar por nombre o email..." th:value="${estudianteFiltro}">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Filtrar</button>
+                    <a th:href="@{/sanciones/admin/listar}" class="btn btn-secondary"><i class="bi bi-arrow-clockwise"></i> Limpiar</a>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- ===== Acciones masivas + Tabla (FORM INDEPENDIENTE) ===== -->
+    <form id="formAccionesMasivas"
+          th:action="@{/sanciones/admin/resolver-multiples}"
+          method="post"
+          class="page-wrap"
+          style="display:contents">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+        <!-- Toolbar sólo si hay activas -->
+        <section class="panel-card page-wrap animate-in in" th:if="${sancionesActivas != null and !#lists.isEmpty(sancionesActivas)}">
+            <div class="table-toolbar">
+                <div class="left">
+                    <button type="button" id="btnSeleccionarTodas" class="btn btn-ghost btn-xs">
+                        <i class="bi bi-check-square"></i> Seleccionar todas las activas
+                    </button>
+                    <span id="contadorSeleccionadas" class="muted">0 seleccionadas</span>
+                </div>
+                <div class="right">
+                    <button type="submit" id="btnResolverSeleccionadas" class="btn btn-primary btn-xs" disabled>
+                        <i class="bi bi-check-circle"></i> Resolver seleccionadas
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel-card page-wrap animate-in in">
+            <div class="panel-head"><h3><i class="bi bi-table"></i> Lista de sanciones</h3></div>
+
+            <div th:if="${todasSanciones == null or #lists.isEmpty(todasSanciones)}" style="text-align:center; padding:28px">
+                <i class="bi bi-inbox" style="font-size:48px; color:var(--muted)"></i>
+                <p class="muted" style="margin-top:8px">No hay sanciones registradas</p>
+                <a th:href="@{/sanciones/admin/crear}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Crear primera sanción</a>
+            </div>
+
+            <div th:if="${todasSanciones != null and !#lists.isEmpty(todasSanciones)}" class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th width="36"><input type="checkbox" id="checkboxTodas"></th>
+                        <th>ID</th>
+                        <th>Usuario</th>
+                        <th>Tipo</th>
+                        <th>Descripción</th>
+                        <th>Multa</th>
+                        <th>Fecha</th>
+                        <th>Estado</th>
+                        <th class="actions-cell">Acciones</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    <tr th:each="sancion : ${todasSanciones}"
+                        th:with="
+                isResolved=${sancion.isResolved},
+                typeLower=${#strings.toLowerCase(sancion.type)},
+                typeCls=${
+                  (typeLower=='daño físico' || typeLower=='daño fisico') ? 'danger' :
+                  (typeLower=='exceso de tiempo')                         ? 'warn'   :
+                  (typeLower=='mora')                                     ? 'primary': 'primary'
+                },
+                created=${sancion.createdAt != null ? #temporals.format(sancion.createdAt, 'dd/MM/yyyy HH:mm') : '—'},
+                fineText=${(sancion.fineAmount != null && sancion.fineAmount > 0) ? '$' + #numbers.formatDecimal(sancion.fineAmount, 1, 2) : 'Sin multa'},
+                statusCls=${isResolved ? 'success' : 'warn'},
+                statusLabel=${isResolved ? 'Resuelta' : 'Activa'}
+              ">
+                        <td>
+                            <input type="checkbox" class="checkbox-sancion" name="sancionIds"
+                                   th:value="${sancion.id}" th:disabled="${isResolved}">
+                        </td>
+
+                        <td th:text="${sancion.id}">1</td>
+
+                        <td>
+                            <strong th:text="${sancion.user.fullName}">Nombre Usuario</strong><br>
+                            <span class="muted" th:text="${sancion.user.email}">email@ejemplo.com</span>
+                        </td>
+
+                        <td><span class="badge" th:classappend="' ' + ${typeCls}" th:text="${sancion.type}">Tipo</span></td>
+
+                        <td>
+              <span class="desc-ellipsis" th:text="${#strings.abbreviate(sancion.description, 50)}"
+                    th:title="${sancion.description}">Descripción…</span>
+                        </td>
+
+                        <td>
+                            <span th:if="${sancion.fineAmount != null && sancion.fineAmount > 0}" class="tag danger" th:text="${fineText}">$0.00</span>
+                            <span th:unless="${sancion.fineAmount != null && sancion.fineAmount > 0}" class="muted">Sin multa</span>
+                        </td>
+
+                        <td th:text="${created}">—</td>
+
+                        <td>
+              <span class="badge" th:classappend="' ' + ${statusCls}">
+                <i class="bi" th:classappend="${isResolved} ? ' bi-check-circle' : ' bi-exclamation-triangle'"></i>
+                <span th:text="${statusLabel}">Activa</span>
+              </span>
+                        </td>
+
+                        <td class="actions-cell">
+                            <div class="action-group">
+                                <a th:href="@{/sanciones/admin/detalle/{id}(id=${sancion.id})}" class="btn btn-ghost btn-xs" title="Ver detalles" aria-label="Ver">
+                                    <i class="bi bi-eye"></i><span>Ver</span>
+                                </a>
+
+                                <!-- Resolver individual con fetch (sin form anidado) -->
+                                <button type="button" class="btn btn-primary btn-xs"
+                                        th:if="${!isResolved}"
+                                        th:attr="data-id=${sancion.id}"
+                                        onclick="resolverSancion(this.getAttribute('data-id'))"
+                                        title="Resolver sanción" aria-label="Resolver">
+                                    <i class="bi bi-check-circle"></i><span>Resolver</span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </form>
+
+</main>
+
+<footer class="app-footer container">
+    <span>© <span th:text="${#dates.format(#dates.createNow(),'yyyy')}">2025</span> LapSync</span>
+    <span class="muted">Panel de administración</span>
+</footer>
+
+<!-- JS (sin inlining de Thymeleaf) -->
+<script>
+    // Toggle de tema
+    (function(){
+      const btn = document.getElementById('themeToggle');
+      if(!btn) return;
+      btn.addEventListener('click', function(){
+        const root = document.documentElement;
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        root.style.colorScheme = next;
+        try{ localStorage.setItem('theme', next); }catch(e){}
+      });
+    })();
+
+    // Utilidades CSRF para fetch
+    function getCsrf(){
+      const token = document.querySelector('meta[name="_csrf"]')?.content || '';
+      const headerName = document.querySelector('meta[name="_csrf_header"]')?.content || 'X-CSRF-TOKEN';
+      return { token, headerName };
+    }
+
+    // Selección masiva + contador + confirmación
+    document.addEventListener('DOMContentLoaded', function() {
+      const checkboxTodas = document.getElementById('checkboxTodas');
+      const checkboxesSanciones = document.querySelectorAll('.checkbox-sancion');
+      const contador = document.getElementById('contadorSeleccionadas');
+      const btnResolver = document.getElementById('btnResolverSeleccionadas');
+      const btnSeleccionarTodas = document.getElementById('btnSeleccionarTodas');
+      const formMasivas = document.getElementById('formAccionesMasivas');
+
+      function actualizar(){
+        const seleccionadas = document.querySelectorAll('.checkbox-sancion:checked').length;
+        if (contador) contador.textContent = `${seleccionadas} seleccionadas`;
+        if (btnResolver) btnResolver.disabled = seleccionadas === 0;
+      }
+
+      if (checkboxTodas){
+        checkboxTodas.addEventListener('change', function(){
+          checkboxesSanciones.forEach(cb => { if(!cb.disabled) cb.checked = checkboxTodas.checked; });
+          actualizar();
+        });
+      }
+      checkboxesSanciones.forEach(cb => cb.addEventListener('change', actualizar));
+
+      if (btnSeleccionarTodas){
+        btnSeleccionarTodas.addEventListener('click', function(){
+          checkboxesSanciones.forEach(cb => { if(!cb.disabled) cb.checked = true; });
+          actualizar();
+        });
+      }
+
+      if (formMasivas){
+        formMasivas.addEventListener('submit', function(e){
+          e.preventDefault();
+          const n = document.querySelectorAll('.checkbox-sancion:checked').length;
+          if (!n){
+            Swal.fire({ title:'Ninguna sanción seleccionada', text:'Selecciona al menos una sanción.', icon:'warning' });
+            return;
+          }
+          Swal.fire({
+            title: '¿Resolver sanciones seleccionadas?',
+            text: `Se resolverán ${n} sanciones`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#16a34a',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sí, resolver todas',
+            cancelButtonText: 'Cancelar'
+          }).then(r => { if(r.isConfirmed) formMasivas.submit(); });
+        });
+      }
+    });
+
+    // Resolver individual mediante fetch (sin forms anidados)
+    async function resolverSancion(id){
+      const {token, headerName} = getCsrf();
+
+      const ok = await Swal.fire({
+        title: '¿Resolver sanción?',
+        text: 'Esta acción marcará la sanción como resuelta',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#16a34a',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Sí, resolver',
+        cancelButtonText: 'Cancelar'
+      }).then(r => r.isConfirmed);
+
+      if(!ok) return;
+
+      try{
+        const resp = await fetch(`/sanciones/admin/resolver/${id}`, {
+          method: 'POST',
+          headers: { [headerName]: token }
+        });
+
+        if (resp.redirected){
+          // Si el controlador devuelve redirect
+          window.location.href = resp.url;
+          return;
+        }
+
+        if (resp.ok){
+          await Swal.fire({icon:'success', title:'Sanción resuelta', timer:900, showConfirmButton:false});
+          location.reload();
+        }else{
+          const txt = await resp.text().catch(()=> '');
+          throw new Error(txt || `HTTP ${resp.status}`);
+        }
+      }catch(err){
+        Swal.fire({icon:'error', title:'No se pudo resolver', text:String(err).slice(0,200)});
+      }
+    }
+
+    // Exportar PDF (feedback visual)
+    function exportarPDF(){
+      Swal.fire({
+        title: 'Generando PDF...',
+        text: 'Por favor espera mientras se genera el reporte',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+      window.location.href = '/sanciones/admin/exportar-pdf';
+      setTimeout(() => Swal.close(), 900);
+    }
+</script>
+
+</body>
+</html>

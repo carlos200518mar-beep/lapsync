@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Crear Nueva Sanción - Admin</title>
+
+    <!-- Fuente & iconos -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" />
+
+    <!-- Estilos globales -->
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css" />
+
+    <!-- SweetAlert -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Fijar tema antes de pintar -->
+    <script>
+        !function(){
+          try{
+            const key = 'theme_admin';
+            const t = localStorage.getItem(key)
+              || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light');
+            document.documentElement.setAttribute('data-theme', t);
+            document.documentElement.style.colorScheme = t;
+          }catch(e){}
+        }();
+    </script>
+
+    <!-- Estilos específicos de la vista (navbar centrado) -->
+    <style>
+        .page-wrap{ width:min(900px,96%); margin-inline:auto; display:grid; gap:16px }
+
+        /* ===== Subnavbar centrada minimal ===== */
+        .subnav{
+          background:var(--panel);
+          border:1px solid var(--border-soft);
+          border-radius:var(--radius);
+          box-shadow:var(--shadow-1);
+          padding:12px 14px;
+          display:grid; gap:8px;
+        }
+        .subnav__top{
+          display:grid;
+          grid-template-columns:1fr auto 1fr;
+          grid-template-areas:"left center right";
+          align-items:center; gap:10px;
+        }
+        .subnav__left{ grid-area:left; display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+        .subnav__center{ grid-area:center; display:flex; flex-direction:column; align-items:center; gap:2px; text-align:center }
+        .subnav__right{ grid-area:right; display:flex; gap:8px; align-items:center; justify-content:flex-end; flex-wrap:wrap }
+
+        .subnav__title{ margin:0; font-weight:800; letter-spacing:.2px; display:flex; gap:8px; align-items:center; font-size:clamp(16px,1.9vw,18px) }
+        .subnav__subtitle{ margin:0; color:var(--muted); font-size:12px }
+
+        .btn-compact{ height:36px; padding:8px 12px; border-radius:12px; display:inline-flex; align-items:center; gap:8px }
+        .btn-icon{ width:36px; height:36px; padding:0; border-radius:12px; display:grid; place-items:center }
+
+        /* Helpers de la vista */
+        .char-hint{ display:flex; justify-content:space-between; align-items:center }
+        .char-hint .muted{ font-size:12px }
+        .readonly-note{ font-size:12px; color:var(--muted); margin-top:6px }
+
+        @media (max-width:760px){
+          .subnav__top{ grid-template-columns:auto 1fr auto }
+        }
+    </style>
+</head>
+<body>
+
+<main class="container app-main">
+
+    <!-- ===== Navbar centrado ===== -->
+    <section class="page-wrap subnav">
+        <div class="subnav__top">
+            <div class="subnav__left">
+                <a th:href="@{/sanciones/admin/listar}" class="btn btn-secondary btn-compact">
+                    <i class="bi bi-arrow-left"></i> Volver a lista
+                </a>
+            </div>
+
+            <div class="subnav__center">
+                <h1 class="subnav__title"><i class="bi bi-shield-plus"></i> Crear nueva sanción</h1>
+                <p class="subnav__subtitle">Completa los campos requeridos</p>
+            </div>
+
+            <div class="subnav__right">
+                <a th:href="@{/dashboard}" class="btn btn-ghost btn-compact">
+                    <i class="bi bi-house"></i> Dashboard
+                </a>
+                <button type="button" id="themeToggle" class="btn btn-ghost theme-toggle btn-icon" title="Cambiar tema">
+                    <i class="bi bi-brightness-high sun"></i>
+                    <i class="bi bi-moon moon"></i>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Mensaje (éxito / error) -->
+    <section class="page-wrap" th:if="${mensaje}">
+        <div class="notice" th:classappend="${tipoMensaje == 'success'} ? ' success' : ' error'">
+            <div class="left">
+                <i class="icon bi" th:classappend="${tipoMensaje == 'success'} ? ' bi-check-circle-fill' : ' bi-exclamation-triangle-fill'"></i>
+                <span th:text="${mensaje}">Mensaje</span>
+            </div>
+            <button type="button" class="btn btn-ghost btn-xs" onclick="this.closest('.notice').remove()">
+                <i class="bi bi-x-lg"></i> Cerrar
+            </button>
+        </div>
+    </section>
+
+    <!-- Formulario -->
+    <section class="panel-card page-wrap animate-in in" style="--d:.05s">
+        <div class="panel-head"><h3><i class="bi bi-plus-circle"></i> Nueva sanción</h3></div>
+
+        <div style="padding:16px 18px">
+            <form th:action="@{/sanciones/admin/crear}" th:object="${penalty}" method="post" id="formCrearSancion" class="form-grid" novalidate>
+
+                <!-- Estudiante -->
+                <div class="field">
+                    <label for="user" class="label">Estudiante <span class="badge primary">Obligatorio</span></label>
+                    <select th:field="*{user}" class="select" id="user" required>
+                        <option value="">Seleccionar estudiante…</option>
+                        <option th:each="usuario : ${usuarios}"
+                                th:if="${usuario.role == 'student'}"
+                                th:value="${usuario.id}"
+                                th:text="${usuario.fullName + ' (' + usuario.email + ')'}">
+                            Usuario
+                        </option>
+                    </select>
+                    <div class="error" th:if="${#fields.hasErrors('user')}" th:errors="*{user}"></div>
+                </div>
+
+                <!-- Tipo -->
+                <div class="field">
+                    <label for="type" class="label">Tipo de sanción <span class="badge primary">Obligatorio</span></label>
+                    <select th:field="*{type}" class="select" id="type" required>
+                        <option value="">Seleccionar tipo…</option>
+                        <option value="Daño físico">Daño de equipo por negligencia</option>
+                        <option value="Exceso de tiempo">Devolución fuera de tiempo (más de 1 hora)</option>
+                        <option value="Sacar equipo fuera de institución">Sacar equipo fuera de institución</option>
+                        <option value="Mora">Mora en devolución (hasta 1 hora)</option>
+                        <option value="Pérdida de equipo">Pérdida de equipo y/o cargador</option>
+                        <option value="Uso no autorizado">Prestar equipo a terceros</option>
+                    </select>
+                    <div class="error" th:if="${#fields.hasErrors('type')}" th:errors="*{type}"></div>
+                </div>
+
+                <!-- Descripción -->
+                <div class="field" style="grid-column:1/-1">
+                    <label for="description" class="label">Descripción <span class="badge primary">Obligatorio</span></label>
+                    <textarea th:field="*{description}" id="description" rows="4"
+                              class="input" placeholder="Describe detalladamente la sanción..." required minlength="10"></textarea>
+                    <div class="char-hint">
+                        <span class="help">Sé claro y menciona fechas, equipos y observaciones.</span>
+                        <span class="muted" id="charCount">0 / 500</span>
+                    </div>
+                    <div class="error" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></div>
+                </div>
+
+                <!-- Multa -->
+                <div class="field" style="max-width:320px">
+                    <label for="fineAmount" class="label">Multa (USD)</label>
+                    <input type="number" th:field="*{fineAmount}" class="input"
+                           id="fineAmount" step="0.01" min="0" max="10000" placeholder="0.00" />
+                    <div class="readonly-note">Se sugiere según el tipo seleccionado (editable si aplica).</div>
+                    <div class="error" th:if="${#fields.hasErrors('fineAmount')}" th:errors="*{fineAmount}"></div>
+                </div>
+
+                <!-- Acciones -->
+                <div class="form-actions" style="grid-column:1/-1">
+                    <a th:href="@{/sanciones/admin/listar}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary" id="btnCrear">
+                        <i class="bi bi-check-circle"></i> Crear sanción
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </section>
+
+</main>
+
+<footer class="app-footer container">
+    <span>© <span th:text="${#dates.format(#dates.createNow(),'yyyy')}">2025</span> LapSync</span>
+    <span class="muted">Panel de administración</span>
+</footer>
+
+<!-- Lógica -->
+<script>
+    // Toggle de tema
+    (function(){
+      const btn = document.getElementById('themeToggle');
+      if(!btn) return;
+      btn.addEventListener('click', function(){
+        const root = document.documentElement;
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        root.style.colorScheme = next;
+        try{ localStorage.setItem('theme', next); }catch(e){}
+      });
+    })();
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('formCrearSancion');
+      const userSel = document.getElementById('user');
+      const typeSel = document.getElementById('type');
+      const desc = document.getElementById('description');
+      const charCount = document.getElementById('charCount');
+      const fine = document.getElementById('fineAmount');
+      const btnCrear = document.getElementById('btnCrear');
+
+      const multas = {
+        'Mora': '1.00',
+        'Exceso de tiempo': '5.00',
+        'Uso no autorizado': '100.00',
+        'Sacar equipo fuera de institución': '200.00',
+        'Pérdida de equipo': '200.00',
+        'Daño físico': '200.00'
+      };
+
+      // Sugerir multa según tipo
+      typeSel.addEventListener('change', function() {
+        const v = multas[this.value] || '';
+        fine.value = v;
+        fine.readOnly = !!v;
+        validateForm();
+      });
+
+      // Contador de caracteres y límite 500
+      desc.addEventListener('input', function() {
+        if (this.value.length > 500) this.value = this.value.slice(0,500);
+        charCount.textContent = `${this.value.length} / 500`;
+        validateForm();
+      });
+
+      form.addEventListener('input', validateForm);
+
+      function setValid(el, ok){
+        el.classList.remove('is-valid','is-invalid');
+        el.classList.add(ok ? 'is-valid' : 'is-invalid');
+      }
+
+      function validateForm(){
+        let ok = true;
+
+        if (!userSel.value){ setValid(userSel,false); ok=false; } else setValid(userSel,true);
+        if (!typeSel.value){ setValid(typeSel,false); ok=false; } else setValid(typeSel,true);
+        if (!desc.value || desc.value.length<10){ setValid(desc,false); ok=false; } else setValid(desc,true);
+
+        if (fine.value){
+          const n = parseFloat(fine.value);
+          if (isNaN(n) || n<0 || n>10000){ setValid(fine,false); ok=false; }
+          else setValid(fine,true);
+        } else {
+          fine.classList.remove('is-valid','is-invalid');
+        }
+
+        btnCrear.disabled = !ok;
+        return ok;
+      }
+
+      form.addEventListener('submit', function(e){
+        e.preventDefault();
+        if (!validateForm()) return;
+
+        const userName = userSel.selectedOptions[0] ? userSel.selectedOptions[0].text : '';
+        const sanctionType = typeSel.selectedOptions[0] ? typeSel.selectedOptions[0].text : '';
+
+        Swal.fire({
+          title: '¿Confirmar creación de la sanción?',
+          html: `<strong>Estudiante:</strong> ${userName}<br><strong>Tipo:</strong> ${sanctionType}`,
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonColor: '#16a34a',
+          cancelButtonColor: '#6b7280',
+          confirmButtonText: 'Sí, crear sanción',
+          cancelButtonText: 'Cancelar'
+        }).then((r) => {
+          if (r.isConfirmed){
+            btnCrear.disabled = true;
+            btnCrear.innerHTML = '<i class="bi bi-hourglass-split"></i> Creando…';
+            form.submit();
+          }
+        });
+      });
+
+      validateForm();
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Mis Préstamos</title>
+
+    <!-- Fuente & iconos -->
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css"/>
+
+    <!-- Estilos globales -->
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css"/>
+
+    <!-- DataTables (vanilla, sin Bootstrap) -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"/>
+
+    <!-- Fijar tema antes de pintar -->
+    <script>
+        !function(){
+          try{
+            const key = 'theme_student';
+            const t = localStorage.getItem(key)
+              || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light');
+            document.documentElement.setAttribute('data-theme', t);
+            document.documentElement.style.colorScheme = t;
+          }catch(e){}
+        }();
+    </script>
+
+    <!-- Ajustes de esta vista -->
+    <style>
+        .page-wrap{width:min(1100px,96%);margin-inline:auto;display:grid;gap:16px}
+
+        /* ========= NAVBAR CENTRADO ========= */
+        .topbar{width:100%}
+        .topbar-inner{
+          display:grid;
+          grid-template-columns: 1fr auto 1fr; /* izq - centro - der */
+          align-items:center;
+          gap:12px;
+          padding:10px 12px;
+          border:1px solid var(--border-soft);
+          border-radius:16px;
+          background:var(--panel);
+          box-shadow:var(--shadow-1);
+        }
+        .topbar-left{justify-self:start; display:flex; align-items:center; gap:8px}
+        .topbar-center{
+          justify-self:center;
+          display:flex; align-items:center; gap:10px;
+          text-align:center;
+        }
+        .topbar-title{font-weight:800; line-height:1}
+        .topbar-sub{margin:0; font-size:12px; color:var(--muted)}
+        .topbar-actions{justify-self:end; display:flex; align-items:center; gap:10px}
+        .btn-back{display:inline-flex; align-items:center; gap:6px}
+
+        /* responsive: cuando sea muy estrecho, apila */
+        @media (max-width: 560px){
+          .topbar-inner{
+            grid-template-columns: 1fr auto; /* izq y der, el centro ocupará toda la fila siguiente */
+            row-gap:8px;
+          }
+          .topbar-center{grid-column: 1 / -1; justify-self:center}
+        }
+
+        /* ====== tarjetas / lista / estados (lo tuyo) ====== */
+        .loan-grid{display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:12px}
+        @media (max-width:720px){ .loan-grid{grid-template-columns:1fr} }
+        .kv{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--border-soft);border-radius:14px;background:var(--panel)}
+        .kv strong{font-weight:800}
+        .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid var(--border-soft);background:var(--panel);font-weight:700}
+        .pill i{color:var(--primary)}
+        .pill.time{border-color:rgba(245,158,11,.35)}
+        .pill.time i{color:var(--amber)}
+        .state{font-size:12px;font-weight:800;padding:6px 10px;border-radius:999px;border:1px solid transparent}
+        .state.success{background:var(--chip-success-bg);color:var(--chip-success-text);border-color:var(--chip-success-border)}
+        .state.warn{background:var(--badge-warn-bg);color:var(--badge-warn-text);border-color:var(--badge-warn-border)}
+        .state.primary{background:linear-gradient(180deg,#EEE8FF,#E7E0FF);color:var(--primary-600);border:1px solid rgba(124,58,237,.24)}
+        .state.danger{background:var(--badge-danger-bg);color:var(--badge-danger-text);border-color:var(--badge-danger-border)}
+
+        /* DataTables look */
+        table.dataTable{border-collapse:separate;border-spacing:0;width:100%}
+        table.dataTable thead th{
+          text-align:left;font-weight:800;font-size:13px;letter-spacing:.2px;color:var(--text);
+          background:linear-gradient(180deg,rgba(124,58,237,.08),rgba(124,58,237,.03));
+          border-bottom:1px solid var(--border-soft);padding:12px 14px;position:sticky;top:0;z-index:1
+        }
+        html[data-theme="dark"] table.dataTable thead th{
+          background:linear-gradient(180deg,rgba(124,58,237,.12),rgba(255,255,255,.02))
+        }
+        table.dataTable tbody td{padding:12px 14px;border-bottom:1px solid var(--border-soft);white-space:nowrap}
+        table.dataTable tbody tr:hover{background:linear-gradient(180deg,rgba(124,58,237,.06),rgba(124,58,237,.02))}
+        .dataTables_wrapper .dataTables_filter{margin:10px 0}
+        .dataTables_wrapper .dataTables_filter input{
+          border:1px solid var(--border-soft);background:var(--panel);color:var(--text);
+          border-radius:12px;padding:8px 10px;outline:0
+        }
+        .dataTables_wrapper .dataTables_paginate{padding:12px 0}
+        .dataTables_wrapper .dataTables_paginate .paginate_button{
+          border:1px solid var(--border-soft)!important;background:var(--panel)!important;color:var(--text)!important;
+          border-radius:12px!important;padding:6px 10px!important;margin:0 3px;box-shadow:var(--shadow-1)
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover{transform:translateY(-2px);box-shadow:var(--shadow-2)}
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current{
+          color:#fff!important;background:linear-gradient(135deg,var(--primary),#8B5CF6)!important;border-color:rgba(124,58,237,.35)!important
+        }
+        .dataTables_wrapper .dataTables_info{color:var(--muted)}
+    </style>
+</head>
+<body>
+
+<main class="container app-main">
+
+    <!-- NAVBAR CENTRADO -->
+    <section class="topbar page-wrap">
+        <div class="topbar-inner">
+            <!-- izquierda -->
+            <div class="topbar-left">
+                <a class="btn btn-secondary btn-back" href="javascript:history.back()">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+            </div>
+
+            <!-- centro -->
+            <div class="topbar-center">
+                <i class="bi bi-clock-history" aria-hidden="true"></i>
+                <div>
+                    <div class="topbar-title">Mis préstamos</div>
+                    <p class="topbar-sub">Resumen y historial</p>
+                </div>
+            </div>
+
+            <!-- derecha -->
+            <div class="topbar-actions">
+                <button type="button" id="themeToggle" class="btn btn-ghost theme-toggle" title="Cambiar tema" aria-label="Cambiar tema">
+                    <i class="bi bi-brightness-high sun"></i>
+                    <i class="bi bi-moon moon"></i>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Préstamo actual -->
+    <section class="panel-card page-wrap animate-in in" style="--d:.04s"
+             th:if="${loans != null and !loans.isEmpty()}"
+             th:with="
+            st=${#strings.toLowerCase(loans[0].status)},
+            stateCls=${
+              st=='returned' ? 'success' :
+              st=='active'   ? 'warn' :
+              st=='approved' ? 'primary' :
+              st=='requested'? 'primary' : 'danger'
+            },
+            stateLabel=${
+              st=='returned' ? 'Devuelto' :
+              st=='active'   ? 'En curso' :
+              st=='approved' ? 'Aprobado' :
+              st=='requested'? 'Solicitado' : loans[0].status
+            }">
+        <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center">
+            <h3 style="margin:0"><i class="bi bi-laptop"></i> Préstamo actual</h3>
+            <span class="state" th:classappend="' '+${stateCls}" th:text="${stateLabel}">En curso</span>
+        </div>
+
+        <div class="list" style="padding:12px">
+            <div class="loan-grid">
+                <div class="kv"><strong>Horas solicitadas</strong><span th:text="${loans[0].requestedHours}">0</span></div>
+
+                <div class="kv">
+                    <strong>Tiempo restante</strong>
+                    <span class="pill time">
+            <i class="bi bi-hourglass-split"></i>
+            <span id="contador"
+                  th:data-delivered="${loans[0].deliveredAt != null ? #temporals.format(loans[0].deliveredAt, 'yyyy-MM-dd''T''HH:mm:ss') : ''}"
+                  th:data-hours="${loans[0].requestedHours}"
+                  th:data-status="${#strings.toLowerCase(loans[0].status)}">—</span>
+          </span>
+                </div>
+
+                <div class="kv"><strong>Solicitado en</strong>
+                    <span th:text="${#temporals.format(loans[0].requestedAt, 'dd/MM/yyyy HH:mm')}">—</span>
+                </div>
+
+                <div class="kv"><strong>Aprobado en</strong>
+                    <span th:text="${loans[0].approvedAt != null ? #temporals.format(loans[0].approvedAt,'dd/MM/yyyy HH:mm') : '—'}">—</span>
+                </div>
+
+                <div class="kv"><strong>Entregado en</strong>
+                    <span th:text="${loans[0].deliveredAt != null ? #temporals.format(loans[0].deliveredAt,'dd/MM/yyyy HH:mm') : '—'}">—</span>
+                </div>
+
+                <div class="kv"><strong>Devuelto en</strong>
+                    <span th:text="${loans[0].returnedAt != null ? #temporals.format(loans[0].returnedAt,'dd/MM/yyyy HH:mm') : '—'}">—</span>
+                </div>
+
+                <div class="kv"><strong>Estimado devolución</strong>
+                    <span id="horaDevolucion"
+                          th:text="${loans[0].deliveredAt != null and loans[0].requestedHours != null
+                   ? #temporals.format(loans[0].deliveredAt.plusHours(loans[0].requestedHours),'dd/MM/yyyy HH:mm')
+                   : '—'}">—</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Historial -->
+    <section class="panel-card page-wrap animate-in in" style="--d:.06s"
+             th:if="${loans != null and loans.size() > 1}">
+        <div class="panel-head">
+            <h3><i class="bi bi-journal-text"></i> Historial de préstamos</h3>
+        </div>
+
+        <div class="table-wrap" style="border-top-left-radius:0;border-top-right-radius:0">
+            <table id="loansTable" class="display" style="width:100%">
+                <thead>
+                <tr>
+                    <th>Fecha de solicitud</th>
+                    <th>Número de laptop</th>
+                    <th>Modelo</th>
+                    <th>Estado</th>
+                    <th>Horas</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="loan : ${loans.subList(1, loans.size())}"
+                    th:with="
+              st=${#strings.toLowerCase(loan.status)},
+              stateCls=${
+                 st=='returned' ? 'success' :
+                 st=='active'   ? 'warn' :
+                 st=='approved' ? 'primary' :
+                 st=='requested'? 'primary' : 'danger'
+              },
+              stateLabel=${
+                 st=='returned' ? 'Devuelto' :
+                 st=='active'   ? 'En curso' :
+                 st=='approved' ? 'Aprobado' :
+                 st=='requested'? 'Solicitado' : loan.status
+              }">
+                    <td th:text="${#temporals.format(loan.requestedAt,'dd/MM/yyyy HH:mm')}"></td>
+                    <td th:text="${loan.laptop != null ? loan.laptop.assetTag : '—'}"></td>
+                    <td th:text="${loan.laptop != null ? loan.laptop.model   : '—'}"></td>
+                    <td><span class="state" th:classappend="' '+${stateCls}" th:text="${stateLabel}">Estado</span></td>
+                    <td th:text="${loan.requestedHours}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Vacío -->
+    <section class="panel-card page-wrap animate-in in" style="--d:.04s"
+             th:if="${loans == null or loans.isEmpty()}">
+        <div class="panel-head">
+            <h3><i class="bi bi-inbox"></i> No tienes préstamos registrados</h3>
+        </div>
+        <div class="list" style="text-align:center;padding:24px;color:var(--muted)">
+            <p>Cuando solicites un préstamo aparecerá aquí.</p>
+            <a th:href="@{/loans}" class="btn btn-primary">
+                <i class="bi bi-clipboard2-plus"></i> Solicitar préstamo
+            </a>
+        </div>
+    </section>
+
+</main>
+
+<footer class="app-footer container">
+    <span>© <span th:text="${#dates.format(#dates.createNow(),'yyyy')}">2025</span> LapSync</span>
+    <span class="muted">Área de estudiante</span>
+</footer>
+
+<!-- jQuery + DataTables -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+<!-- Contador -->
+<script th:src="@{/js/contador.js}" src="/js/contador.js"></script>
+
+<!-- IMPORTANTE: desactivar inlining -->
+<script th:inline="none">
+    $(function(){
+      const orderCfg = []; orderCfg.push([0,'desc']);
+      $('#loansTable').DataTable({
+        pageLength: 10,
+        lengthChange: false,
+        order: orderCfg,
+        language: {
+          paginate: { previous: 'Anterior', next: 'Siguiente' },
+          info: 'Mostrando _START_ a _END_ de _TOTAL_ préstamos',
+          infoEmpty: 'No hay préstamos para mostrar',
+          zeroRecords: 'No se encontraron registros',
+          search: 'Buscar:'
+        }
+      });
+    });
+
+    // Toggle de tema
+    (function(){
+      const btn = document.getElementById('themeToggle');
+      if(!btn) return;
+      btn.addEventListener('click', function(){
+        const root = document.documentElement;
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        root.style.colorScheme = next;
+        try{ localStorage.setItem('theme', next); }catch(e){}
+      });
+    })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Editar laptop</title>
+
+    <!-- Fuente & iconos -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" />
+
+    <!-- Estilos globales -->
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css" />
+
+    <!-- Fijar tema antes de pintar -->
+    <script>
+        !function(){
+          try{
+            const key = 'theme_admin';
+            const t = localStorage.getItem(key)
+              || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light');
+            document.documentElement.setAttribute('data-theme', t);
+            document.documentElement.style.colorScheme = t;
+          }catch(e){}
+        }();
+    </script>
+
+    <!-- Ajustes pequeños de esta vista -->
+    <style>
+        .form-narrow{ width:min(760px,100%); margin-inline:auto; }
+        .status-pill{ display:flex; align-items:center; gap:8px }
+    </style>
+</head>
+<body>
+
+<main class="container app-main">
+
+    <!-- Barra superior -->
+    <section class="panel-bar centered-block">
+        <div class="panel-left">
+            <a th:href="@{/laptops}" class="btn btn-secondary btn-back">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+            <div class="title">
+                <i class="bi bi-pencil-square"></i>
+                <div style="display:flex; flex-direction:column">
+                    <strong style="font-weight:800">Editar laptop</strong>
+                    <span class="meta">
+            <span th:text="'ID: ' + ${laptop.id}">ID: 0</span>
+            ·
+            <span th:text="'Asset: ' + ${laptop.assetTag}">Asset: LP-000</span>
+          </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="header-actions" style="display:flex; gap:10px; align-items:center">
+            <!-- Toggle de tema -->
+            <button type="button" id="themeToggle" class="btn btn-ghost theme-toggle" title="Cambiar tema" style="padding:8px 12px">
+                <i class="bi bi-brightness-high sun"></i>
+                <i class="bi bi-moon moon"></i>
+            </button>
+        </div>
+    </section>
+
+    <!-- Tarjeta -->
+    <section class="panel-card centered-block animate-in in" style="--d:.05s"
+             th:with="
+             statusLower = ${#strings.toLowerCase(laptop.status)},
+             cls = ${
+               (statusLower=='available' || statusLower=='disponible') ? 'success' :
+               (statusLower=='loaned'    || statusLower=='prestada')  ? 'warn'    :
+               (statusLower=='reserved'  || statusLower=='reservada') ? 'primary' :
+               (statusLower=='repair'    || statusLower=='reparacion')? 'warn'    :
+               (statusLower=='retired'   || statusLower=='retirada')  ? 'danger'  : 'primary'
+             },
+             label = ${
+               (statusLower=='available' || statusLower=='disponible') ? 'Disponible' :
+               (statusLower=='loaned'    || statusLower=='prestada')  ? 'Prestada'   :
+               (statusLower=='reserved'  || statusLower=='reservada') ? 'Reservada'  :
+               (statusLower=='repair'    || statusLower=='reparacion')? 'En reparación' :
+               (statusLower=='retired'   || statusLower=='retirada')  ? 'Retirada'   : laptop.status
+             }">
+
+        <div class="panel-head" style="display:flex; align-items:center; justify-content:space-between">
+            <h3><i class="bi bi-hdd"></i> Datos del equipo</h3>
+            <div class="status-pill">
+                <span class="muted">Estado actual:</span>
+                <span class="badge" th:classappend="' ' + ${cls}" th:text="${label}">Disponible</span>
+            </div>
+        </div>
+
+        <div class="form-narrow" style="padding:16px 18px">
+            <form th:action="@{|/laptops/update/${laptop.id}|}" th:object="${laptop}" method="post" class="form-grid" novalidate>
+                <!-- Asset Tag -->
+                <div class="field">
+                    <label class="label" for="assetTag">Asset Tag</label>
+                    <input id="assetTag" type="text" th:field="*{assetTag}" class="input"
+                           placeholder="p. ej. LP-001" required
+                           th:classappend="${#fields.hasErrors('assetTag')} ? ' is-invalid'">
+                    <small class="help">Identificador único del equipo.</small>
+                    <small class="error" th:if="${#fields.hasErrors('assetTag')}" th:errors="*{assetTag}">Error</small>
+                </div>
+
+                <!-- Marca -->
+                <div class="field">
+                    <label class="label" for="brand">Marca</label>
+                    <input id="brand" type="text" th:field="*{brand}" class="input"
+                           placeholder="p. ej. Dell, HP, Lenovo" required
+                           th:classappend="${#fields.hasErrors('brand')} ? ' is-invalid'">
+                    <small class="help">Fabricante del equipo.</small>
+                    <small class="error" th:if="${#fields.hasErrors('brand')}" th:errors="*{brand}">Error</small>
+                </div>
+
+                <!-- Modelo -->
+                <div class="field">
+                    <label class="label" for="model">Modelo</label>
+                    <input id="model" type="text" th:field="*{model}" class="input"
+                           placeholder="p. ej. Latitude 5400" required
+                           th:classappend="${#fields.hasErrors('model')} ? ' is-invalid'">
+                    <small class="help">Modelo exacto del equipo.</small>
+                    <small class="error" th:if="${#fields.hasErrors('model')}" th:errors="*{model}">Error</small>
+                </div>
+
+                <!-- Estado -->
+                <div class="field">
+                    <label class="label" for="status">Estado</label>
+                    <select id="status" th:field="*{status}" class="select" required
+                            th:classappend="${#fields.hasErrors('status')} ? ' is-invalid'">
+                        <option value="">-- Selecciona estado --</option>
+                        <option value="available">Disponible</option>
+                        <option value="loaned">Prestada</option>
+                        <option value="reserved">Reservada</option>
+                        <option value="repair">En reparación</option>
+                        <option value="retired">Retirada</option>
+                    </select>
+                    <small class="error" th:if="${#fields.hasErrors('status')}" th:errors="*{status}">Error</small>
+                </div>
+
+                <!-- Descripción de la condición -->
+                <div class="field" style="grid-column:1/-1">
+                    <label class="label" for="conditionDescription">Descripción de la condición</label>
+                    <textarea id="conditionDescription" th:field="*{conditionDescription}" class="input" rows="4"
+                              placeholder="Ej.: Pantalla con rayones, teclado dañado, etc."></textarea>
+                    <small class="help">Detalles útiles sobre el estado físico del equipo.</small>
+                </div>
+
+                <!-- Acciones -->
+                <div class="form-actions" style="grid-column:1/-1">
+                    <a th:href="@{/laptops}" class="btn btn-ghost">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save2"></i> Actualizar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+</main>
+
+<footer class="app-footer container">
+    <span>© <span th:text="${#dates.format(#dates.createNow(),'yyyy')}">2025</span> LapSync</span>
+    <span class="muted">Panel de administración</span>
+</footer>
+
+<!-- Script toggle tema + UX -->
+<script>
+    (function(){
+      const btn = document.getElementById('themeToggle');
+      if(btn){
+        btn.addEventListener('click', function(){
+          const root = document.documentElement;
+          const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+          root.setAttribute('data-theme', next);
+          root.style.colorScheme = next;
+          try{ localStorage.setItem('theme', next); }catch(e){}
+        });
+      }
+      const first = document.getElementById('assetTag');
+      if(first) first.focus();
+    })();
+</script>
+
+</body>
+</html>

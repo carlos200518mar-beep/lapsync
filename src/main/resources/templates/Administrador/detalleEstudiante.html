@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title th:text="${titulo}">Detalle del Estudiante</title>
+
+    <!-- Fuente & iconos -->
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
+
+    <!-- Estilos globales -->
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css"/>
+
+    <!-- SweetAlert (si usarás acciones con feedback) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- CSRF para fetch -->
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+
+    <!-- Fijar tema antes de pintar -->
+    <script>
+        !function(){
+          try{
+            const key = 'theme_admin';
+            const t = localStorage.getItem(key)
+              || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light');
+            document.documentElement.setAttribute('data-theme', t);
+            document.documentElement.style.colorScheme = t;
+          }catch(e){}
+        }();
+    </script>
+
+    <!-- Ajustes específicos a esta vista (coinciden con tu patrón) -->
+    <style>
+        .page-wrap{ width:min(1100px,96%); margin-inline:auto; display:grid; gap:16px }
+        .subnav{
+          background:var(--panel); border:1px solid var(--border-soft);
+          border-radius:var(--radius); box-shadow:var(--shadow-1);
+          padding:12px 14px; display:grid; gap:8px;
+        }
+        .subnav__top{
+          display:grid; grid-template-columns:1fr auto 1fr;
+          grid-template-areas:"left center right";
+          align-items:center; gap:10px;
+        }
+        .subnav__left{ grid-area:left; display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+        .subnav__center{ grid-area:center; display:flex; flex-direction:column; align-items:center; gap:2px; text-align:center }
+        .subnav__right{ grid-area:right; display:flex; gap:8px; align-items:center; justify-content:flex-end; flex-wrap:wrap }
+        .subnav__title{ margin:0; font-weight:800; letter-spacing:.2px; display:flex; gap:8px; align-items:center; font-size:clamp(16px,1.9vw,18px) }
+        .subnav__subtitle{ margin:0; color:var(--muted); font-size:12px }
+        .btn-compact{ height:36px; padding:8px 12px; border-radius:12px; display:inline-flex; align-items:center; gap:8px }
+        .btn-icon{ width:36px; height:36px; padding:0; border-radius:12px; display:grid; place-items:center }
+
+        .info-grid{ display:grid; gap:8px }
+        .desc-ellipsis{ max-width:360px; display:inline-block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+        .actions-cell{ text-align:center }
+        .action-group{ display:inline-grid; grid-auto-flow:column; gap:8px; align-items:center; justify-content:center }
+        @media (max-width:760px){ .subnav__top{ grid-template-columns:auto 1fr auto } }
+    </style>
+</head>
+<body>
+
+<main class="container app-main">
+
+    <!-- ===== SUBNAV centrado ===== -->
+    <section class="page-wrap subnav">
+        <div class="subnav__top">
+            <div class="subnav__left">
+                <a th:href="@{/solicitudes-usuario/{id}(id=${usuario.id})}" class="btn btn-secondary btn-compact">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+            </div>
+
+            <div class="subnav__center">
+                <h1 class="subnav__title">
+                    <i class="bi bi-person-lines-fill"></i>
+                    <span th:text="${titulo}">Detalle del Estudiante</span>
+                </h1>
+                <p class="subnav__subtitle">
+                    Última actualización:
+                    <span th:text="${#temporals.format(#temporals.createNow(),'dd/MM/yyyy HH:mm')}">--/--/---- --:--</span>
+                </p>
+            </div>
+
+            <div class="subnav__right">
+                <button type="button" id="themeToggle" class="btn btn-ghost theme-toggle btn-icon" title="Cambiar tema">
+                    <i class="bi bi-brightness-high sun"></i>
+                    <i class="bi bi-moon moon"></i>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== Info del estudiante (usa panel-card + list de tu app.css) ===== -->
+    <section class="panel-card page-wrap animate-in in" style="--d:.05s">
+        <div class="panel-head"><h3><i class="bi bi-card-text"></i> Información del estudiante</h3></div>
+        <ul class="list info-grid">
+            <li class="list-item">
+                <div class="list-main">
+                    <strong>Nombre</strong>
+                    <span class="ellipsis" th:text="${usuario.fullName}">Nombre Apellido</span>
+                </div>
+                <div class="list-meta"><span class="badge primary">Perfil</span></div>
+            </li>
+            <li class="list-item">
+                <div class="list-main">
+                    <strong>Carnet</strong>
+                    <span th:text="${usuario.studentId}">A0012345</span>
+                </div>
+                <div class="list-meta"><span class="chip warn">Identificación</span></div>
+            </li>
+            <li class="list-item">
+                <div class="list-main">
+                    <strong>DUI</strong>
+                    <span th:text="${usuario.nationalId}">00000000-0</span>
+                </div>
+                <div class="list-meta"><span class="chip success">Verificado</span></div>
+            </li>
+            <li class="list-item">
+                <div class="list-main">
+                    <strong>Carrera</strong>
+                    <span class="ellipsis" th:text="${usuario.career}">Ingeniería en Sistemas</span>
+                </div>
+                <div class="list-meta"><span class="badge warn">Académico</span></div>
+            </li>
+            <li class="list-item">
+                <div class="list-main">
+                    <strong>Email</strong>
+                    <span class="ellipsis" th:text="${usuario.email}">correo@ejemplo.com</span>
+                </div>
+                <div class="list-meta">
+                    <a class="btn btn-ghost btn-icon" th:href="'mailto:' + ${usuario.email}" title="Enviar correo">
+                        <i class="bi bi-envelope"></i>
+                    </a>
+                </div>
+            </li>
+        </ul>
+    </section>
+
+    <!-- ===== Historial de sanciones ===== -->
+    <section class="panel-card page-wrap animate-in in" style="--d:.1s">
+        <div class="panel-head"><h3><i class="bi bi-exclamation-triangle"></i> Historial de sanciones</h3></div>
+
+        <!-- vacío -->
+        <div th:if="${sanciones == null or #lists.isEmpty(sanciones)}" style="text-align:center; padding:28px">
+            <i class="bi bi-inbox" style="font-size:48px; color:var(--muted)"></i>
+            <p class="muted" style="margin-top:8px">Sin sanciones registradas.</p>
+        </div>
+
+        <!-- tabla -->
+        <div th:if="${sanciones != null and !#lists.isEmpty(sanciones)}" class="table-wrap">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Descripción</th>
+                    <th>Fecha</th>
+                    <th>Monto Multa</th>
+                    <th>Estado</th>
+                    <th class="actions-cell">Acciones</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="sancion : ${sanciones}"
+                    th:with="
+              isResolved=${sancion.isResolved},
+              typeLower=${#strings.toLowerCase(sancion.type)},
+              typeCls=${
+                (typeLower=='daño físico' || typeLower=='daño fisico') ? 'danger' :
+                (typeLower=='exceso de tiempo')                         ? 'warn'   :
+                (typeLower=='mora')                                     ? 'primary': 'primary'
+              },
+              created=${sancion.createdAt != null ? #temporals.format(sancion.createdAt, 'dd/MM/yyyy HH:mm') : '—'},
+              fineText=${(sancion.fineAmount != null && sancion.fineAmount > 0) ? '$ ' + #numbers.formatDecimal(sancion.fineAmount, 1, 'COMMA', 2, 'POINT') : 'Sin multa'},
+              statusCls=${isResolved ? 'success' : 'danger'},
+              statusLabel=${isResolved ? 'Resuelto' : 'Activo'}
+            ">
+                    <td><span class="badge" th:classappend="' ' + ${typeCls}" th:text="${sancion.type}">Tipo</span></td>
+                    <td><span class="desc-ellipsis" th:title="${sancion.description}" th:text="${#strings.abbreviate(sancion.description, 60)}">Descripción…</span></td>
+                    <td th:text="${created}">—</td>
+                    <td>
+                        <span th:if="${sancion.fineAmount != null && sancion.fineAmount > 0}" class="tag danger" th:text="${fineText}">$ 0.00</span>
+                        <span th:unless="${sancion.fineAmount != null && sancion.fineAmount > 0}" class="muted">Sin multa</span>
+                    </td>
+                    <td>
+            <span class="badge" th:classappend="' ' + ${statusCls}">
+              <i class="bi" th:classappend="${isResolved} ? ' bi-check-circle' : ' bi-exclamation-triangle'"></i>
+              <span th:text="${statusLabel}">Activo</span>
+            </span>
+                    </td>
+                    <td class="actions-cell">
+                        <div class="action-group">
+                            <a th:href="@{'/sanciones/admin/detalle/' + ${sancion.id}}" class="btn btn-ghost btn-xs" title="Ver detalles">
+                                <i class="bi bi-eye"></i><span>Ver</span>
+                            </a>
+                            <button type="button" class="btn btn-primary btn-xs"
+                                    th:if="${!isResolved}"
+                                    th:attr="data-id=${sancion.id}"
+                                    onclick="resolverSancion(this.getAttribute('data-id'))"
+                                    title="Resolver">
+                                <i class="bi bi-check-circle"></i><span>Resolver</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</main>
+
+<footer class="app-footer container">
+    <span>© <span th:text="${#temporals.format(#temporals.createNow(),'yyyy')}">2025</span> LapSync</span>
+    <span class="muted">Detalle de estudiante</span>
+</footer>
+
+<!-- JS utilitario (igual que tu referencia) -->
+<script>
+    // Toggle de tema
+    (function(){
+      const btn = document.getElementById('themeToggle');
+      if(!btn) return;
+      btn.addEventListener('click', function(){
+        const root = document.documentElement;
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        root.style.colorScheme = next;
+        try{ localStorage.setItem('theme', next); }catch(e){}
+      });
+    })();
+
+    // CSRF para fetch
+    function getCsrf(){
+      const token = document.querySelector('meta[name="_csrf"]')?.content || '';
+      const headerName = document.querySelector('meta[name="_csrf_header"]')?.content || 'X-CSRF-TOKEN';
+      return { token, headerName };
+    }
+
+    // Resolver sanción individual (opcional)
+    async function resolverSancion(id){
+      const {token, headerName} = getCsrf();
+      const ok = await Swal.fire({
+        title: '¿Resolver sanción?',
+        text: 'Marcará la sanción como resuelta',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#16a34a',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Sí, resolver',
+        cancelButtonText: 'Cancelar'
+      }).then(r => r.isConfirmed);
+      if(!ok) return;
+
+      try{
+        const resp = await fetch(`/sanciones/admin/resolver/${id}`, { method:'POST', headers:{ [headerName]: token } });
+        if (resp.redirected){ location.href = resp.url; return; }
+        if (resp.ok){ await Swal.fire({icon:'success', title:'Sanción resuelta', timer:900, showConfirmButton:false}); location.reload(); }
+        else{ throw new Error(await resp.text()); }
+      }catch(err){
+        Swal.fire({icon:'error', title:'No se pudo resolver', text:String(err).slice(0,200)});
+      }
+    }
+</script>
+
+</body>
+</html>

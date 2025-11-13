@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Detalle de Sanción</title>
+
+    <!-- Fuente & iconos -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" />
+
+    <!-- Estilos globales -->
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css" />
+
+    <!-- Fijar tema antes de pintar -->
+    <script>
+        !function(){
+          try{
+            const key = 'theme_admin';
+            const t = localStorage.getItem(key)
+              || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light');
+            document.documentElement.setAttribute('data-theme', t);
+            document.documentElement.style.colorScheme = t;
+          }catch(e){}
+        }();
+    </script>
+
+    <!-- Estilos específicos -->
+    <style>
+        .page-wrap{ width:min(980px,96%); margin-inline:auto; display:grid; gap:16px }
+
+        /* ===== Subnavbar centrada ===== */
+        .subnav{
+          background:var(--panel);
+          border:1px solid var(--border-soft);
+          border-radius:var(--radius);
+          box-shadow:var(--shadow-1);
+          padding:12px 14px;
+          display:grid; gap:8px;
+        }
+        .subnav__top{
+          display:grid;
+          grid-template-columns:1fr auto 1fr;
+          grid-template-areas:"left center right";
+          align-items:center; gap:10px;
+        }
+        .subnav__left{ grid-area:left; display:flex; align-items:center; gap:8px; flex-wrap:wrap }
+        .subnav__center{ grid-area:center; display:flex; flex-direction:column; align-items:center; gap:4px; text-align:center }
+        .subnav__right{ grid-area:right; display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap }
+
+        .subnav__title{ margin:0; font-weight:800; letter-spacing:.2px; display:flex; gap:8px; align-items:center; font-size:clamp(16px,1.9vw,18px) }
+        .subnav__subtitle{ margin:0; color:var(--muted); font-size:12px }
+        .badges-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:center }
+
+        .btn-compact{ height:36px; padding:8px 12px; border-radius:12px; display:inline-flex; align-items:center; gap:8px }
+        .btn-icon{ width:36px; height:36px; padding:0; border-radius:12px; display:grid; place-items:center }
+
+        /* Contenido */
+        .ph-row{ display:flex; align-items:center; justify-content:space-between; gap:12px }
+        .info-grid{ display:grid; gap:14px; grid-template-columns: repeat(2, minmax(240px,1fr)) }
+        @media (max-width:760px){
+          .info-grid{ grid-template-columns:1fr }
+          .subnav__top{ grid-template-columns:auto 1fr auto }
+        }
+
+        .subcard{
+          border:1px solid var(--border-soft);
+          border-radius:14px;
+          background:var(--panel);
+          box-shadow:var(--shadow-1);
+          padding:14px;
+        }
+
+        /* Títulos de sección (sin degradados) */
+        .section-title{ margin:0 0 8px; font-weight:800; display:flex; align-items:center; gap:8px }
+        .section-title.danger{ color: var(--red); }
+        html[data-theme="dark"] .section-title.danger{ color:#FF9A9A; }
+
+        /* Caja de descripción (gradiente sólo en light) */
+        .desc-box{
+          border:1px solid var(--border-soft);
+          border-radius:14px;
+          background:linear-gradient(180deg, var(--panel), rgba(251,250,255,.7));
+          padding:14px;
+        }
+        /* FIX modo oscuro: sin halo blanco */
+        html[data-theme="dark"] .desc-box{
+          background:var(--panel) !important;
+          border-color:var(--border-soft);
+          box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
+        }
+        .desc-box p{ margin:0; line-height:1.5; white-space:pre-wrap }
+
+        .kv{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px;
+             border:1px solid var(--border-soft); border-radius:12px; background:var(--panel) }
+        .kv + .kv{ margin-top:8px }
+        .kv .label{ font-weight:700 }
+        .status-badges{ display:flex; align-items:center; gap:10px }
+        .btn-row{ display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap }
+    </style>
+</head>
+<body>
+
+<main class="container app-main">
+
+    <!-- ===== Navbar centrado ===== -->
+    <section class="page-wrap subnav">
+        <div class="subnav__top">
+            <div class="subnav__left">
+                <a th:href="@{/sanciones/admin/listar}" class="btn btn-secondary btn-compact">
+                    <i class="bi bi-arrow-left"></i> Volver a lista
+                </a>
+            </div>
+
+            <div class="subnav__center">
+                <h1 class="subnav__title">
+                    <i class="bi bi-shield-lock"></i>
+                    Detalle de sanción #
+                    <span th:text="${sancion != null ? sancion.id : '—'}">1</span>
+                </h1>
+                <p class="subnav__subtitle">Información del estudiante y de la sanción</p>
+
+                <div class="badges-row" th:if="${sancion != null}">
+                  <span th:if="${sancion.isResolved}" class="badge success">
+                    <i class="bi bi-check-circle"></i> Resuelta
+                  </span>
+                    <span th:unless="${sancion.isResolved}" class="badge warn">
+                    <i class="bi bi-exclamation-triangle"></i> Activa
+                  </span>
+                </div>
+            </div>
+
+            <div class="subnav__right">
+                <a th:href="@{/administrador/dashboard}" class="btn btn-ghost btn-compact">
+                    <i class="bi bi-house"></i> Dashboard
+                </a>
+                <button type="button" id="themeToggle" class="btn btn-ghost theme-toggle btn-icon" title="Cambiar tema">
+                    <i class="bi bi-brightness-high sun"></i>
+                    <i class="bi bi-moon moon"></i>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tarjeta principal -->
+    <section class="panel-card page-wrap animate-in in" style="--d:.05s" th:if="${sancion}">
+        <div class="panel-head">
+            <div class="ph-row">
+                <h3><i class="bi bi-file-text"></i> Resumen</h3>
+                <div class="status-badges">
+                  <span th:if="${sancion.isResolved}" class="badge success">
+                    <i class="bi bi-check-circle"></i> Resuelta
+                  </span>
+                    <span th:unless="${sancion.isResolved}" class="badge warn">
+                    <i class="bi bi-exclamation-triangle"></i> Activa
+                  </span>
+                </div>
+            </div>
+        </div>
+
+        <div style="padding:16px 18px; display:grid; gap:16px">
+
+            <!-- Dos columnas -->
+            <div class="info-grid">
+                <!-- Estudiante -->
+                <div class="subcard">
+                    <h4 class="section-title"><i class="bi bi-person"></i> Información del estudiante</h4>
+                    <div class="kv">
+                        <span class="label">Nombre</span>
+                        <span class="ellipsis" th:text="${sancion.user.fullName}">Nombre del estudiante</span>
+                    </div>
+                    <div class="kv">
+                        <span class="label">Email</span>
+                        <span class="ellipsis" th:text="${sancion.user.email}">email@ejemplo.com</span>
+                    </div>
+                    <div class="kv">
+                        <span class="label">ID Usuario</span>
+                        <span th:text="${sancion.user.id}">123</span>
+                    </div>
+                </div>
+
+                <!-- Sanción -->
+                <div class="subcard">
+                    <!-- Título sin degradado/halo -->
+                    <h4 class="section-title danger"><i class="bi bi-exclamation-octagon"></i> Detalles de la sanción</h4>
+
+                    <div class="kv">
+                        <span class="label">Tipo</span>
+                        <span class="badge"
+                              th:classappend="${
+                                sancion.type == 'Daño físico' || sancion.type == 'Pérdida de equipo' ? ' danger' :
+                                (sancion.type == 'Exceso de tiempo' || sancion.type == 'Mora' ? ' warn' : ' primary')
+                              }"
+                              th:text="${sancion.type}">Tipo</span>
+                    </div>
+
+                    <div class="kv">
+                        <span class="label">Multa</span>
+                        <span>
+                          <span th:if="${sancion.fineAmount != null and sancion.fineAmount > 0}" class="badge danger">
+                            $<span th:text="${#numbers.formatDecimal(sancion.fineAmount, 1, 2)}">0.00</span>
+                          </span>
+                          <span th:unless="${sancion.fineAmount != null and sancion.fineAmount > 0}" class="muted">Sin multa</span>
+                        </span>
+                    </div>
+
+                    <div class="kv">
+                        <span class="label">Creada</span>
+                        <span th:text="${sancion.createdAt != null ? #temporals.format(sancion.createdAt, 'dd/MM/yyyy HH:mm') : 'N/A'}">
+                          01/01/2024 10:00
+                        </span>
+                    </div>
+
+                    <div class="kv" th:if="${sancion.resolvedAt != null}">
+                        <span class="label">Resuelta</span>
+                        <span th:text="${#temporals.format(sancion.resolvedAt, 'dd/MM/yyyy HH:mm')}">02/01/2024 15:30</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Descripción -->
+            <div>
+                <h4 class="kpi-title" style="margin-bottom:8px"><i class="bi bi-file-text"></i> Descripción completa</h4>
+                <div class="desc-box">
+                    <p th:text="${sancion.description}">Descripción detallada de la sanción…</p>
+                </div>
+            </div>
+
+            <!-- Acciones -->
+            <div class="form-actions btn-row" style="grid-column:1/-1">
+
+
+                <form th:if="${!sancion.isResolved}"
+                      th:action="@{/sanciones/admin/resolver/{id}(id=${sancion.id})}"
+                      method="POST"
+                      onsubmit="return confirm('¿Resolver esta sanción?');"
+                      style="display:inline">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Resolver sanción
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Si no existe sanción -->
+    <section class="panel-card page-wrap animate-in in" style="--d:.05s" th:if="${sancion == null}">
+        <div class="panel-head"><h3><i class="bi bi-exclamation-circle"></i> Sanción no encontrada</h3></div>
+        <div style="padding:16px 18px">
+            <p class="muted">No se encontró la información solicitada.</p>
+            <div class="form-actions">
+                <a th:href="@{/sanciones/admin/listar}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Volver a lista
+                </a>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<footer class="app-footer container">
+    <span>© <span th:text="${#dates.format(#dates.createNow(),'yyyy')}">2025</span> LapSync</span>
+    <span class="muted">Panel de administración</span>
+</footer>
+
+<!-- Toggle de tema -->
+<script>
+    (function(){
+      const btn = document.getElementById('themeToggle');
+      if(!btn) return;
+      btn.addEventListener('click', function(){
+        const root = document.documentElement;
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        root.style.colorScheme = next;
+        try{ localStorage.setItem('theme', next); }catch(e){}
+      });
+    })();
+</script>
+
+</body>
+</html>

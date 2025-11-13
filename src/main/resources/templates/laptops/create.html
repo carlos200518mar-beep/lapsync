@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nueva laptop</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" />
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css" />
+
+    <script>
+        !function(){
+          try{
+            const key = 'theme_admin';
+            const t = localStorage.getItem(key)
+              || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light');
+            document.documentElement.setAttribute('data-theme', t);
+            document.documentElement.style.colorScheme = t;
+          }catch(e){}
+        }();
+    </script>
+
+    <style>
+        .form-narrow { width: min(720px, 100%); margin-inline: auto; }
+        .notice{border:1px solid var(--border-soft); background:var(--panel); border-radius:12px; padding:10px 12px; display:flex; gap:8px; align-items:center}
+        .notice.success{border-color:#16a34a33}
+        .notice.error{border-color:#ef444433}
+    </style>
+</head>
+<body>
+
+<main class="container app-main">
+
+    <!-- Barra superior -->
+    <section class="panel-bar centered-block">
+        <div class="panel-left">
+            <a th:href="@{/laptops}" class="btn btn-secondary btn-back">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+            <div class="title">
+                <i class="bi bi-laptop"></i>
+                <div style="display:flex; flex-direction:column">
+                    <strong style="font-weight:800">Nueva laptop</strong>
+                    <span class="meta">Registra un nuevo equipo en el inventario</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="header-actions" style="display:flex; gap:10px; align-items:center">
+            <button type="button" id="themeToggle" class="btn btn-ghost theme-toggle" title="Cambiar tema" style="padding:8px 12px">
+                <i class="bi bi-brightness-high sun"></i>
+                <i class="bi bi-moon moon"></i>
+            </button>
+        </div>
+    </section>
+
+    <!-- Mensajes flash -->
+    <section class="centered-block" th:if="${success} or ${error}" style="width:min(720px,100%);margin-bottom:8px">
+        <div class="notice success" th:if="${success}">
+            <i class="bi bi-check2-circle"></i><span th:text="${success}">OK</span>
+        </div>
+        <div class="notice error" th:if="${error}">
+            <i class="bi bi-exclamation-triangle"></i><span th:text="${error}">Error</span>
+        </div>
+    </section>
+
+    <!-- Tarjeta con formulario -->
+    <section class="panel-card centered-block animate-in in" style="--d:.05s">
+        <div class="panel-head">
+            <h3><i class="bi bi-hdd"></i> Datos de la laptop</h3>
+        </div>
+
+        <div class="form-narrow" style="padding:16px 18px">
+            <form th:action="@{/laptops}" th:object="${laptop}" method="post" class="form-grid" novalidate>
+                <!-- CSRF -->
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+                <!-- ✅ status forzado a 'available' -->
+                <input type="hidden" th:field="*{status}" th:value="'available'"/>
+                <!-- (opcional) mostrar error de status si la validación fallara -->
+                <small class="error" th:if="${#fields.hasErrors('status')}" th:errors="*{status}" style="grid-column:1/-1"></small>
+
+                <!-- Asset Tag -->
+                <div class="field">
+                    <label class="label" for="assetTag">Asset Tag</label>
+                    <input id="assetTag" type="text" th:field="*{assetTag}" class="input"
+                           placeholder="p. ej. LP-001" required
+                           th:classappend="${#fields.hasErrors('assetTag')} ? ' is-invalid'">
+                    <small class="help">Identificador único del equipo.</small>
+                    <small class="error" th:if="${#fields.hasErrors('assetTag')}" th:errors="*{assetTag}">Error</small>
+                </div>
+
+                <!-- Marca -->
+                <div class="field">
+                    <label class="label" for="brand">Marca</label>
+                    <input id="brand" type="text" th:field="*{brand}" class="input"
+                           placeholder="p. ej. Dell, HP, Lenovo"
+                           th:classappend="${#fields.hasErrors('brand')} ? ' is-invalid'">
+                    <small class="help">Nombre del fabricante.</small>
+                    <small class="error" th:if="${#fields.hasErrors('brand')}" th:errors="*{brand}">Error</small>
+                </div>
+
+                <!-- Modelo -->
+                <div class="field">
+                    <label class="label" for="model">Modelo</label>
+                    <input id="model" type="text" th:field="*{model}" class="input"
+                           placeholder="p. ej. Latitude 5400"
+                           th:classappend="${#fields.hasErrors('model')} ? ' is-invalid'">
+                    <small class="help">Modelo exacto del equipo.</small>
+                    <small class="error" th:if="${#fields.hasErrors('model')}" th:errors="*{model}">Error</small>
+                </div>
+
+                <!-- Condición -->
+                <div class="field" style="grid-column:1/-1">
+                    <label class="label" for="conditionDescription">Condición (opcional)</label>
+                    <textarea id="conditionDescription" th:field="*{conditionDescription}" class="input" rows="3"
+                              placeholder="Observaciones del equipo..."></textarea>
+                    <small class="error" th:if="${#fields.hasErrors('conditionDescription')}" th:errors="*{conditionDescription}">Error</small>
+                </div>
+
+                <!-- Acciones -->
+                <div class="form-actions" style="grid-column:1/-1">
+                    <a th:href="@{/laptops}" class="btn btn-ghost">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check2-circle"></i> Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+</main>
+
+<footer class="app-footer container">
+    <span>© <span th:text="${#dates.format(#dates.createNow(),'yyyy')}">2025</span> LapSync</span>
+    <span class="muted">Panel de administración</span>
+</footer>
+
+<script>
+    (function(){
+      const btn = document.getElementById('themeToggle');
+      if(!btn) return;
+      btn.addEventListener('click', function(){
+        const root = document.documentElement;
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light':'dark';
+        root.setAttribute('data-theme', next);
+        root.style.colorScheme = next;
+        try{ localStorage.setItem('theme', next); }catch(e){}
+      });
+      const first = document.getElementById('assetTag');
+      if(first) first.focus();
+    })();
+</script>
+
+</body>
+</html>

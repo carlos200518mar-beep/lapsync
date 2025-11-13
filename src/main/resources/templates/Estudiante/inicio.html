@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Inicio Estudiante</title>
+
+    <!-- Fuente & iconos -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" />
+
+    <!-- Estilos globales -->
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css" />
+
+    <!-- SweetAlert + contador -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script th:src="@{/js/contador.js}"></script>
+
+    <!-- Fijar tema antes de pintar -->
+    <script>
+        !function(){
+          try{
+            const role = 'student'; // vista de estudiante
+            const key = 'theme_' + role;
+            const t = localStorage.getItem(key)
+              || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light');
+            document.documentElement.setAttribute('data-theme', t);
+            document.documentElement.style.colorScheme = t;
+          }catch(e){}
+        }();
+    </script>
+
+    <!-- Estilos específicos de esta vista (coexisten con app.css) -->
+    <style>
+        .page-wrap{ width:min(1100px,96%); margin-inline:auto; display:grid; gap:16px }
+
+        /* ===== SUBNAV (navbar) ===== */
+        .subnav{
+          background:var(--panel);
+          border:1px solid var(--border-soft);
+          border-radius:16px;
+          box-shadow:var(--shadow-1);
+          padding:8px 10px;
+          display:block;
+        }
+        /* fila única (si no cabe, permite scroll horizontal) */
+        .subnav__row{
+          display:flex; align-items:center; gap:10px;
+          flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none;
+        }
+        .subnav__row::-webkit-scrollbar{ display:none; }
+        .subnav .spacer{ flex:1; min-width:10px }
+
+        /* Brand */
+        .brand{ display:flex; gap:10px; align-items:center; white-space:nowrap }
+        .brand .ico{ width:36px; height:36px; border-radius:12px; display:grid; place-items:center;
+          background:linear-gradient(135deg, rgba(139,92,246,.16), rgba(139,92,246,.08));
+          color:var(--primary) }
+        .brand .title{ font-weight:800; line-height:1 }
+        .brand .sub{ font-size:12px; color:var(--muted); line-height:1.1 }
+
+        /* Chips enlaces */
+        .chip-link{
+          display:inline-flex; align-items:center; gap:8px; padding:8px 12px;
+          border-radius:12px; border:1px solid var(--border-soft); background:var(--panel);
+          box-shadow:var(--shadow-1); font-weight:600; white-space:nowrap;
+        }
+        .chip-link i{ color:var(--primary) }
+
+        /* Botón ícono (tema) */
+        .btn-icon{ width:36px; height:36px; padding:0; border-radius:12px; display:grid; place-items:center }
+
+        /* Perfil */
+        .user-pill{
+          display:flex; align-items:center; gap:10px;
+          padding:6px 10px; border-radius:999px;
+          background:var(--panel); border:1px solid var(--border-soft);
+          box-shadow:var(--shadow-1); max-width: 280px; min-width:0; white-space:nowrap;
+        }
+        .user-pill:hover{ box-shadow:var(--shadow-2) }
+        .avatar{
+          width:36px; height:36px; border-radius:999px; object-fit:cover;
+          border:2px solid rgba(124,58,237,.18); background:#eee;
+          box-shadow: 0 0 0 2px rgba(124,58,237,.08) inset;
+          flex:0 0 auto;
+        }
+        .avatar.initials{ display:grid; place-items:center; font-weight:800; color:#fff;
+          background:linear-gradient(135deg,var(--primary),#8B5CF6) }
+        .user-meta{ line-height:1.05; min-width:0 }
+        .user-name{ font-weight:800; font-size:13px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px }
+        .user-email{ font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px }
+
+        /* ===== HERO ===== */
+        .hero{
+          display:grid; grid-template-columns:1.2fr .8fr; gap:18px;
+          padding:24px; align-items:center;
+          background:linear-gradient(180deg, rgba(139,92,246,.10), rgba(139,92,246,.05));
+          border:1px solid var(--border-soft); border-radius:16px; box-shadow:var(--shadow-1);
+        }
+        html[data-theme="dark"] .hero{
+          background:linear-gradient(180deg, rgba(139,92,246,.14), rgba(139,92,246,.06));
+          border-color:rgba(255,255,255,.08);
+        }
+        .hero h1{ margin:0; font-weight:800; font-size:clamp(22px, 3.2vw, 32px); letter-spacing:.2px }
+        .hero p{ margin:.5rem 0 1rem; color:var(--muted) }
+        .hero-meta{ color:var(--muted); font-size:12.5px }
+        .hero-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:.75rem }
+
+        .hero-img{ position:relative; display:flex; justify-content:center; }
+        .hero-img::before{
+          content:""; position:absolute; inset:auto 0 -8px 0; height:18px; border-radius:999px;
+          background:radial-gradient(ellipse at 50% 50%, rgba(17,24,39,.18), rgba(17,24,39,0));
+          filter:blur(6px);
+        }
+        .hero-img img{
+          position:relative; z-index:1;
+          width:min(460px,40vw); height:auto;
+          filter: drop-shadow(0 10px 22px rgba(16,24,40,.18));
+        }
+        html[data-theme="dark"] .hero-img img{
+          filter: drop-shadow(0 14px 30px rgba(0,0,0,.55)) brightness(1.08) saturate(1.05);
+        }
+        @media (max-width:900px){ .hero{ grid-template-columns:1fr } .hero-img img{ width:min(520px,80vw) } }
+    </style>
+</head>
+<body>
+
+<main class="container app-main">
+
+    <!-- ===== NAV SUPERIOR (una sola línea) ===== -->
+    <section class="page-wrap subnav"
+             th:with="
+             userName=${nombre != null ? nombre : (#authentication != null ? #authentication.principal.attributes['name'] : null)},
+             userEmail=${email  != null ? email  : (#authentication != null ? #authentication.principal.attributes['email'] : null)},
+             userPhoto=${foto   != null and !#strings.isEmpty(foto) ? foto
+                      : (#authentication != null
+                         ? (#authentication.principal.attributes['picture'] != null
+                            ? #authentication.principal.attributes['picture']
+                            : (#authentication.principal.attributes['pictureUrl'] != null
+                               ? #authentication.principal.attributes['pictureUrl'] : null))
+                         : null)}
+           ">
+        <div class="subnav__row">
+            <!-- Brand -->
+            <div class="brand">
+                <div class="ico"><i class="bi bi-mortarboard"></i></div>
+                <div>
+                    <div class="title">Bienvenido a LapSync</div>
+                    <div class="sub">Plataforma de préstamos de laptops para estudiantes</div>
+                </div>
+            </div>
+
+            <!-- Accesos -->
+            <a th:href="@{/estudiante/prestamos}" class="chip-link"><i class="bi bi-laptop"></i> Mis préstamos</a>
+            <a th:href="@{/sanciones/mis-sanciones}" class="chip-link"><i class="bi bi-shield-exclamation"></i> Mis sanciones</a>
+
+            <div class="spacer"></div>
+
+            <!-- Perfil -->
+            <div class="user-pill" title="Cuenta de Google">
+                <img class="avatar" loading="lazy" alt="Foto de perfil" th:if="${userPhoto != null}" th:src="${userPhoto}"/>
+                <div class="avatar initials" th:unless="${userPhoto != null}"
+                     th:text="${#strings.substring((userName != null ? userName : 'U'),0,1)}">U</div>
+                <div class="user-meta">
+                    <div class="user-name"  th:text="${userName}">Estudiante</div>
+                    <div class="user-email" th:text="${userEmail}">correo@dominio.com</div>
+                </div>
+            </div>
+
+            <!-- Salir -->
+            <form th:action="@{/logout}" method="post" style="margin:0">
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-box-arrow-right"></i> Salir
+                </button>
+            </form>
+
+            <!-- Toggle tema -->
+            <button type="button" id="themeToggle" class="btn btn-ghost btn-icon theme-toggle" title="Cambiar tema" aria-label="Cambiar tema">
+                <i class="bi bi-brightness-high sun"></i>
+                <i class="bi bi-moon moon"></i>
+            </button>
+        </div>
+    </section>
+
+    <!-- ===== HERO ===== -->
+    <section class="page-wrap">
+        <div class="hero animate-in in" style="--d:.03s">
+            <div>
+                <h1>
+                    ¡Hola,
+                    <span th:text="${(nombre != null ? nombre : (#authentication != null ? #authentication.principal.attributes['name'] : 'ESTUDIANTE'))?.toUpperCase()}">ESTUDIANTE</span>! 👋
+                </h1>
+                <p>Nos alegra verte en <strong>LapSync</strong>. Desde aquí puedes solicitar equipos y revisar el estado de tus préstamos y sanciones.</p>
+                <div class="hero-meta">
+                    Sesión iniciada como
+                    <span th:text="${email != null ? email : (#authentication != null ? #authentication.principal.attributes['email'] : 'estudiante@dominio.com')}">estudiante@dominio.com</span>
+                </div>
+                <div class="hero-actions">
+                    <a th:href="@{/loans}" class="btn btn-primary">
+                        <i class="bi bi-clipboard2-plus"></i> Solicitar préstamo
+                    </a>
+                </div>
+            </div>
+
+            <div class="hero-img">
+                <img alt="Ilustración estudiante usando laptop"
+                     loading="lazy" decoding="async"
+                     th:src="@{/images/man-with-laptop-light.png}"
+                     src="/images/man-with-laptop-light.png">
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== TRES PANELES ===== -->
+    <section class="panels-grid page-wrap">
+
+        <!-- Requisitos -->
+        <article class="panel-card animate-in in" style="--d:.06s">
+            <div class="panel-head">
+                <h3><i class="bi bi-check-circle-fill" style="color:var(--green)"></i> Requisitos</h3>
+            </div>
+            <ul class="list">
+                <li class="list-item">
+                    <div class="list-main">
+                        <strong>Estudiante activo</strong>
+                        <span class="muted">Carnet vigente</span>
+                    </div>
+                    <span class="badge success">OK</span>
+                </li>
+                <li class="list-item">
+                    <div class="list-main">
+                        <strong>Correo institucional</strong>
+                        <span class="muted">@esfe.agape.edu.sv</span>
+                    </div>
+                    <i class="bi bi-envelope"></i>
+                </li>
+                <li class="list-item">
+                    <div class="list-main">
+                        <strong>Sin sanciones activas</strong>
+                        <span class="muted">Revisión automática</span>
+                    </div>
+                    <span class="badge primary">Requerido</span>
+                </li>
+                <li class="list-item">
+                    <div class="list-main">
+                        <strong>Aceptar términos</strong>
+                        <span class="muted">Uso responsable</span>
+                    </div>
+                    <i class="bi bi-file-text"></i>
+                </li>
+            </ul>
+        </article>
+
+        <!-- Sanciones posibles -->
+        <article class="panel-card animate-in in" style="--d:.08s">
+            <div class="panel-head">
+                <h3><i class="bi bi-exclamation-triangle-fill" style="color:var(--amber)"></i> Sanciones posibles</h3>
+            </div>
+            <ul class="list">
+                <li class="list-item">
+                    <div class="list-main">
+                        <strong>Daño físico</strong>
+                        <span class="muted">Multa proporcional al daño</span>
+                    </div>
+                    <span class="badge danger">Crítica</span>
+                </li>
+                <li class="list-item">
+                    <div class="list-main">
+                        <strong>Exceso de tiempo</strong>
+                        <span class="muted">Bloqueo de acceso 15 días</span>
+                    </div>
+                    <span class="badge warn">Advertencia</span>
+                </li>
+                <li class="list-item">
+                    <div class="list-main">
+                        <strong>Equipo fuera de la institución</strong>
+                        <span class="muted">Sanción automática y reporte</span>
+                    </div>
+                    <span class="tag danger">Grave</span>
+                </li>
+            </ul>
+        </article>
+
+        <!-- Condiciones de uso -->
+        <article class="panel-card animate-in in" style="--d:.1s">
+            <div class="panel-head">
+                <h3><i class="bi bi-file-text-fill" style="color:var(--primary)"></i> Condiciones de uso</h3>
+            </div>
+            <ul class="list">
+                <li class="list-item">
+                    <div class="list-main">
+                        <strong>Préstamo máximo 4h</strong>
+                        <span class="muted">Por día</span>
+                    </div>
+                    <i class="bi bi-alarm"></i>
+                </li>
+                <li class="list-item">
+                    <div class="list-main">
+                        <strong>Un equipo por estudiante</strong>
+                        <span class="muted">No acumulable</span>
+                    </div>
+                    <i class="bi bi-pc-display"></i>
+                </li>
+                <li class="list-item">
+                    <div class="list-main">
+                        <strong>Mismo estado de devolución</strong>
+                        <span class="muted">Revisión al retorno</span>
+                    </div>
+                    <i class="bi bi-arrow-repeat"></i>
+                </li>
+                <li class="list-item">
+                    <div class="list-main">
+                        <strong>Reportar fallos</strong>
+                        <span class="muted">De inmediato al personal</span>
+                    </div>
+                    <i class="bi bi-tools"></i>
+                </li>
+            </ul>
+        </article>
+
+    </section>
+
+</main>
+
+<footer class="app-footer container">
+    <span>© <span th:text="${#dates.format(#dates.createNow(),'yyyy')}">2025</span> LapSync</span>
+    <span class="muted">Área de estudiante</span>
+</footer>
+
+<!-- Éxitos y contador -->
+<div th:if="${successMessage}">
+    <script th:inline="javascript">
+        Swal.fire({
+          icon: 'success',
+          title: '¡Éxito!',
+          text: /*[[${successMessage}]]*/ '',
+          showConfirmButton: true,
+          timer: 2000
+        })
+    </script>
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        var duracionHoras = /*[[${loans[0].requestedHours}]]*/ 0;
+        var deliveredAt   = /*[[${loans[0].deliveredAt}]]*/ null;
+        var status        = /*[[${loans[0].status}]]*/ "";
+        if (typeof iniciarContador === 'function') {
+          iniciarContador(deliveredAt, duracionHoras, status);
+        }
+        /*]]>*/
+    </script>
+</div>
+
+<!-- Toggle de tema -->
+<script>
+    (function(){
+      const btn = document.getElementById('themeToggle');
+      if(!btn) return;
+      btn.addEventListener('click', function(){
+        const root = document.documentElement;
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        root.style.colorScheme = next;
+        try{ localStorage.setItem('theme', next); }catch(e){}
+      });
+    })();
+</script>
+
+</body>
+</html>
