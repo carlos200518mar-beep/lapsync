@@ -51,10 +51,13 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             u.setRole("student");
             u.setIsActive(true);
             u.setCreatedAt(LocalDateTime.now());
+            System.out.println("🔵 Creando nuevo usuario: " + email + " con rol: student");
             return userRepository.save(u);
         });
 
         String role = "ROLE_" + user.getRole().trim().toUpperCase();
+        System.out.println("🟢 Usuario autenticado: " + email + " | Rol BD: " + user.getRole() + " | Rol Spring: " + role);
+        
         return new DefaultOAuth2User(
                 Collections.singleton(() -> role),
                 oAuth2User.getAttributes(),
