@@ -32,26 +32,26 @@ public interface ILoansRepository extends JpaRepository<Loans, Integer> {
     @Query("SELECT l FROM Loans l ORDER BY l.requestedAt DESC")
     List<Loans> findAllOrderByRequestedAtDesc();
 
-    // --- KPI: préstamos por vencer entre now y limit (SQL Server nativo) ---
-    @Query(value = """
-            SELECT COUNT(*) 
-            FROM loans 
-            WHERE status = 'active'
-              AND delivered_at IS NOT NULL
-              AND returned_at IS NULL
-              AND DATEADD(HOUR, requested_hours, delivered_at) BETWEEN :now AND :limit
-            """, nativeQuery = true)
+    // --- KPI: préstamos por vencer entre now y limit (JPQL compatible con todos los BD) ---
+    @Query("""
+            SELECT COUNT(l) 
+            FROM Loans l
+            WHERE l.status = 'active'
+              AND l.deliveredAt IS NOT NULL
+              AND l.returnedAt IS NULL
+              AND FUNCTION('TIMESTAMPADD', HOUR, l.requestedHours, l.deliveredAt) BETWEEN :now AND :limit
+            """)
     long countDueBetween(@Param("now") LocalDateTime now,
                          @Param("limit") LocalDateTime limit);
 
-    @Query(value = """
-            SELECT l.* 
-            FROM loans l
+    @Query("""
+            SELECT l 
+            FROM Loans l
             WHERE l.status = 'active'
-              AND l.delivered_at IS NOT NULL
-              AND l.returned_at IS NULL
-              AND DATEADD(HOUR, l.requested_hours, l.delivered_at) BETWEEN :now AND :limit
-            """, nativeQuery = true)
+              AND l.deliveredAt IS NOT NULL
+              AND l.returnedAt IS NULL
+              AND FUNCTION('TIMESTAMPADD', HOUR, l.requestedHours, l.deliveredAt) BETWEEN :now AND :limit
+            """)
     List<Loans> findDueBetween(@Param("now") LocalDateTime now,
                                @Param("limit") LocalDateTime limit);
 }
