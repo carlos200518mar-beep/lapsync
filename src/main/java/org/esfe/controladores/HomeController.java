@@ -11,7 +11,26 @@ public class HomeController {
 
     @GetMapping("/")
     public String home() {
-        return "home/index"; // Volver al comportamiento original
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        
+        // Si el usuario está autenticado y no es anónimo
+        if (auth != null && auth.isAuthenticated() 
+            && auth.getAuthorities().stream()
+                .noneMatch(a -> a.getAuthority().equals("ROLE_ANONYMOUS"))) {
+            
+            // Obtener el rol
+            String role = auth.getAuthorities().iterator().next().getAuthority();
+            
+            // Redirigir según el rol
+            if (role.contains("ADMIN") || role.contains("SUPERADMIN")) {
+                return "redirect:/administrador/dashboard";
+            } else if (role.contains("STUDENT")) {
+                return "redirect:/estudiante/inicio";
+            }
+        }
+        
+        // Si no está autenticado, redirigir al login
+        return "redirect:/login";
     }
 
     @GetMapping("/dashboard")

@@ -62,7 +62,7 @@ public class PenaltyController {
                 model.addAttribute("foto", principal.getAttribute("picture"));
             }
         }
-        return "sanciones/mis-sanciones";
+        return "Sanciones/mis-sanciones";
     }
 
     // Vista para administradores - Ver todas las sanciones
@@ -83,7 +83,7 @@ public class PenaltyController {
         model.addAttribute("estudiantesBloqueados", estudiantesBloqueados);
         model.addAttribute("titulo", "Gestión de Sanciones");
 
-        return "sanciones/admin-listar";
+        return "Sanciones/admin-listar";
     }
 
     // Formulario para crear nueva sanción (solo admin)
@@ -92,7 +92,7 @@ public class PenaltyController {
         model.addAttribute("penalty", new Penalty());
         model.addAttribute("usuarios", userRepository.findAll());
         model.addAttribute("titulo", "Crear Nueva Sanción");
-        return "sanciones/admin-crear";
+        return "Sanciones/admin-crear";
     }
 
     // Procesar creación de sanción
@@ -105,7 +105,7 @@ public class PenaltyController {
         if (result.hasErrors()) {
             model.addAttribute("usuarios", userRepository.findAll());
             model.addAttribute("titulo", "Crear Nueva Sanción");
-            return "sanciones/admin-crear";
+            return "Sanciones/admin-crear";
         }
 
         try {
@@ -376,7 +376,7 @@ public class PenaltyController {
         if (penaltyOpt.isPresent()) {
             model.addAttribute("sancion", penaltyOpt.get());
             model.addAttribute("titulo", "Detalle de Sanción");
-            return "sanciones/admin-detalle";
+            return "Sanciones/admin-detalle";
         }
 
         return "redirect:/sanciones/admin/listar";
@@ -437,6 +437,6 @@ public class PenaltyController {
         model.addAttribute("estudianteFiltro", estudiante);
         model.addAttribute("titulo", "Sanciones Filtradas");
 
-        return "sanciones/admin-listar";
+        return "Sanciones/admin-listar";
     }
 }
